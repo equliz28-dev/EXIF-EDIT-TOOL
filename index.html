@@ -1,0 +1,3531 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>EXIF 편집기</title>
+<style>
+:root{
+  --bg:#f4f4f2; --panel:#fff; --line:#dedcd6; --text:#1d1d1b; --mute:#6f6d66;
+  --accent:#1f6f5c; --accent-text:#fff; --changed:#fff4d6; --changed-line:#d9a514; --danger:#b3372c;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#161716; --panel:#1f2120; --line:#343735; --text:#ecebe6; --mute:#9a9992;
+    --accent:#4fb39a; --accent-text:#0d1b17; --changed:#3a3115; --changed-line:#d9a514; --danger:#ef7b6f; }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Segoe UI",sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header{padding-top:calc(10px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))}
+header h1{font-size:16px;margin:0;font-weight:650}
+header .note{color:var(--mute);font-size:12px}
+button,select{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--mute)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-text);font-weight:600}
+button.link{border:0;background:none;padding:0;color:var(--mute);text-decoration:underline}
+button:disabled{opacity:.45;cursor:default}
+main{display:grid;grid-template-columns:360px 290px minmax(0,1fr);height:calc(100% - 53px)}
+main>section{overflow:auto;padding:14px}
+#basePane{border-right:1px solid var(--line);background:var(--panel)}
+#listPane{border-right:1px solid var(--line);padding:0;display:flex;flex-direction:column}
+.listHead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px}
+.listHead{white-space:nowrap}
+.listHead b{font-weight:650}
+.listHead button{padding:4px 8px}
+.listHead .sp{flex:1}
+#list{overflow:auto;flex:1}
+.row{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;border-bottom:1px solid var(--line)}
+.row.cur{background:var(--panel);box-shadow:inset 3px 0 0 var(--accent)}
+.row img{width:40px;height:40px;object-fit:cover;border-radius:4px;background:var(--line);flex:none}
+.row .tx{flex:1;min-width:0}
+.row .nm,.row .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm{font-size:13px}
+.row .sub{font-size:11px;color:var(--mute)}
+.row .dot{width:8px;height:8px;border-radius:50%;background:var(--changed-line);visibility:hidden;flex:none}
+.row.dirty .dot{visibility:visible}
+.row .bang{display:none;color:var(--danger);font-weight:700;flex:none}
+.row.mis .bang{display:inline}
+#mis{color:var(--danger);font-size:12px;margin-top:6px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--mute);margin:30px auto;max-width:520px}
+.drop strong{display:block;color:var(--text);font-size:15px;margin-bottom:6px}
+.over{outline:2px solid var(--accent);outline-offset:-4px}
+.top{display:flex;gap:16px;align-items:flex-start;margin-bottom:14px}
+.top img{max-width:220px;max-height:170px;border-radius:8px;background:var(--line)}
+.top h2{margin:0 0 4px;font-size:15px;word-break:break-all}
+.meta{color:var(--mute);font-size:12px}
+.warn{color:var(--danger);font-size:12px;margin-top:6px}
+fieldset{border:1px solid var(--line);border-radius:10px;margin:0 0 12px;padding:10px 12px 12px;background:var(--panel)}
+#basePane fieldset{background:transparent}
+fieldset.off .body{opacity:.45}
+legend{font-weight:650;font-size:13px;padding:0 6px}
+legend label{display:flex;gap:6px;align-items:center;cursor:pointer}
+h3{font-size:14px;margin:4px 0 10px}
+h3:not(:first-child){margin-top:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 12px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}
+.brow{display:grid;grid-template-columns:86px minmax(0,1fr);gap:6px;align-items:center;margin-bottom:6px;font-size:13px}
+input[type=text],input[type=number],input[type=datetime-local]{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;width:100%;min-width:0}
+input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input.changed{background:var(--changed);border-color:var(--changed-line)}
+input.bad{border-color:var(--danger)}
+.gaps{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px}
+.gaps label{font-size:11px;color:var(--mute);display:flex;flex-direction:column;gap:2px;text-align:center}
+.gaps input{text-align:center;padding:4px 2px}
+.hint{color:var(--mute);font-size:12px;margin:6px 0 0}
+.chk{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;font-size:13px}
+.chk small{display:block;color:var(--mute)}
+.btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+details{margin-top:4px}
+summary{cursor:pointer;font-weight:650;font-size:13px;padding:6px 0}
+table{border-collapse:collapse;width:100%;font-size:12px}
+td{border-top:1px solid var(--line);padding:4px 6px;vertical-align:top;word-break:break-all}
+td:first-child{color:var(--mute);white-space:nowrap}
+tr.del td{text-decoration:line-through;opacity:.5}
+tr.del td:last-child{text-decoration:none;opacity:1}
+td:last-child{text-align:right;white-space:nowrap}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:80vw}
+#toast.on{opacity:1}
+@media (max-width:1060px){ main{grid-template-columns:1fr;height:auto} #basePane,#listPane{border-right:0;border-bottom:1px solid var(--line)} #listPane{max-height:300px} }
+input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+input.grayrange{-webkit-appearance:none;appearance:none;height:16px;border-radius:8px;background:linear-gradient(90deg,#fff,#000);border:1px solid var(--mute)}
+input.grayrange::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:22px;border-radius:5px;background:var(--accent);border:2px solid var(--panel)}
+input.grayrange::-moz-range-thumb{width:16px;height:20px;border-radius:5px;background:var(--accent);border:2px solid var(--panel)}
+.sigprev{display:block;width:100%;height:auto;border-radius:8px;margin-bottom:10px;background:var(--line)}
+.seg{display:flex}
+.seg button{flex:1;border-radius:0;padding:5px 4px}
+.seg button:first-child{border-radius:7px 0 0 7px}
+.seg button:last-child{border-radius:0 7px 7px 0}
+.seg button+button{border-left:0}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-text);font-weight:600}
+#nav{display:none}
+@media (max-width:700px){
+  header .note{display:none}
+  main{display:block;height:auto;padding-bottom:76px}
+  main>section{overflow:visible;border:0}
+  #basePane,#listPane{border:0}
+  #listPane{max-height:none;display:none}
+  #editor,#sec-base,#sec-apply,#sec-out{display:none}
+  body[data-step="1"] #sec-base,body[data-step="3"] #sec-apply,body[data-step="4"] #sec-out{display:block}
+  body[data-step="2"] #basePane{display:none}
+  body[data-step="2"] #listPane{display:flex}
+  body[data-step="3"] #editor{display:block}
+  body[data-step="3"] #basePane{padding-bottom:0}
+  input[type=text],input[type=number],input[type=datetime-local],select{font-size:16px;padding:9px 10px}
+  button,select{min-height:42px}
+  button.link{min-height:0}
+  .seg button{padding:8px 4px}
+  .row{padding:10px 12px}
+  .row input[type=checkbox],.chk input,legend input{width:20px;height:20px}
+  .top{flex-direction:column}
+  .top img{max-width:100%;max-height:260px}
+  .brow{grid-template-columns:96px minmax(0,1fr)}
+  h3:not(:first-child){margin-top:4px}
+  #nav{display:flex;position:fixed;left:0;right:0;bottom:0;gap:8px;align-items:center;z-index:5;
+    padding:8px 12px calc(8px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));background:var(--panel);border-top:1px solid var(--line)}
+  #nav button{min-width:84px}
+  #nav .steps{flex:1;text-align:center;font-size:13px;font-weight:650}
+  #toast{bottom:86px}
+}
+</style>
+</head>
+<body data-step="1">
+<header>
+  <h1>EXIF 편집기</h1>
+  <span class="note">사진은 이 컴퓨터 밖으로 나가지 않습니다 · JPEG 전용 · 화질 손실 없음</span>
+  <input id="fileInput" type="file" accept="image/jpeg,.jpg,.jpeg" multiple hidden>
+  <span style="flex:1"></span>
+  <button id="resetBtn" title="올려 둔 사진과 기준 데이터를 모두 비웁니다">초기화</button>
+  <input id="refInput" type="file" accept="image/jpeg,.jpg,.jpeg" hidden>
+  <input id="sigInput" type="file" accept="image/*" hidden>
+</header>
+<main>
+  <section id="basePane"></section>
+  <section id="listPane">
+    <div class="listHead">
+      <input type="checkbox" id="checkAll" checked title="전체 선택">
+      <b>② 변경 대상</b><span id="count" class="meta"></span><span class="sp"></span>
+      <button id="addBtn">사진 추가</button>
+      <button class="link" id="clearBtn">비우기</button>
+    </div>
+    <div id="list"></div>
+  </section>
+  <section id="editor"></section>
+</main>
+<nav id="nav"><button id="prevBtn">이전</button><span class="steps" id="stepLabel"></span><button id="nextBtn" class="primary">다음</button></nav>
+<div id="toast"></div>
+
+<script>
+/* piexifjs
+
+The MIT License (MIT)
+
+Copyright (c) 2014, 2015 hMatoba(https://github.com/hMatoba)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+(function () {
+    "use strict";
+    var that = {};
+    that.version = "1.0.4";
+
+    that.remove = function (jpeg) {
+        var b64 = false;
+        if (jpeg.slice(0, 2) == "\xff\xd8") {
+        } else if (jpeg.slice(0, 23) == "data:image/jpeg;base64," || jpeg.slice(0, 22) == "data:image/jpg;base64,") {
+            jpeg = atob(jpeg.split(",")[1]);
+            b64 = true;
+        } else {
+            throw new Error("Given data is not jpeg.");
+        }
+        
+        var segments = splitIntoSegments(jpeg);
+        var newSegments = segments.filter(function(seg){
+          return  !(seg.slice(0, 2) == "\xff\xe1" &&
+                   seg.slice(4, 10) == "Exif\x00\x00"); 
+        });
+        
+        var new_data = newSegments.join("");
+        if (b64) {
+            new_data = "data:image/jpeg;base64," + btoa(new_data);
+        }
+
+        return new_data;
+    };
+
+
+    that.insert = function (exif, jpeg) {
+        var b64 = false;
+        if (exif.slice(0, 6) != "\x45\x78\x69\x66\x00\x00") {
+            throw new Error("Given data is not exif.");
+        }
+        if (jpeg.slice(0, 2) == "\xff\xd8") {
+        } else if (jpeg.slice(0, 23) == "data:image/jpeg;base64," || jpeg.slice(0, 22) == "data:image/jpg;base64,") {
+            jpeg = atob(jpeg.split(",")[1]);
+            b64 = true;
+        } else {
+            throw new Error("Given data is not jpeg.");
+        }
+
+        var exifStr = "\xff\xe1" + pack(">H", [exif.length + 2]) + exif;
+        var segments = splitIntoSegments(jpeg);
+        var new_data = mergeSegments(segments, exifStr);
+        if (b64) {
+            new_data = "data:image/jpeg;base64," + btoa(new_data);
+        }
+
+        return new_data;
+    };
+
+
+    that.load = function (data) {
+        var input_data;
+        if (typeof (data) == "string") {
+            if (data.slice(0, 2) == "\xff\xd8") {
+                input_data = data;
+            } else if (data.slice(0, 23) == "data:image/jpeg;base64," || data.slice(0, 22) == "data:image/jpg;base64,") {
+                input_data = atob(data.split(",")[1]);
+            } else if (data.slice(0, 4) == "Exif") {
+                input_data = data.slice(6);
+            } else {
+                throw new Error("'load' gots invalid file data.");
+            }
+        } else {
+            throw new Error("'load' gots invalid type argument.");
+        }
+
+        var exifDict = {};
+        var exif_dict = {
+            "0th": {},
+            "Exif": {},
+            "GPS": {},
+            "Interop": {},
+            "1st": {},
+            "thumbnail": null
+        };
+        var exifReader = new ExifReader(input_data);
+        if (exifReader.tiftag === null) {
+            return exif_dict;
+        }
+
+        if (exifReader.tiftag.slice(0, 2) == "\x49\x49") {
+            exifReader.endian_mark = "<";
+        } else {
+            exifReader.endian_mark = ">";
+        }
+
+        var pointer = unpack(exifReader.endian_mark + "L",
+            exifReader.tiftag.slice(4, 8))[0];
+        exif_dict["0th"] = exifReader.get_ifd(pointer, "0th");
+
+        var first_ifd_pointer = exif_dict["0th"]["first_ifd_pointer"];
+        delete exif_dict["0th"]["first_ifd_pointer"];
+
+        if (34665 in exif_dict["0th"]) {
+            pointer = exif_dict["0th"][34665];
+            exif_dict["Exif"] = exifReader.get_ifd(pointer, "Exif");
+        }
+        if (34853 in exif_dict["0th"]) {
+            pointer = exif_dict["0th"][34853];
+            exif_dict["GPS"] = exifReader.get_ifd(pointer, "GPS");
+        }
+        if (40965 in exif_dict["Exif"]) {
+            pointer = exif_dict["Exif"][40965];
+            exif_dict["Interop"] = exifReader.get_ifd(pointer, "Interop");
+        }
+        if (first_ifd_pointer != "\x00\x00\x00\x00") {
+            pointer = unpack(exifReader.endian_mark + "L",
+                first_ifd_pointer)[0];
+            exif_dict["1st"] = exifReader.get_ifd(pointer, "1st");
+            if ((513 in exif_dict["1st"]) && (514 in exif_dict["1st"])) {
+                var end = exif_dict["1st"][513] + exif_dict["1st"][514];
+                var thumb = exifReader.tiftag.slice(exif_dict["1st"][513], end);
+                exif_dict["thumbnail"] = thumb;
+            }
+        }
+
+        return exif_dict;
+    };
+
+
+    that.dump = function (exif_dict_original) {
+        var TIFF_HEADER_LENGTH = 8;
+
+        var exif_dict = copy(exif_dict_original);
+        var header = "Exif\x00\x00\x4d\x4d\x00\x2a\x00\x00\x00\x08";
+        var exif_is = false;
+        var gps_is = false;
+        var interop_is = false;
+        var first_is = false;
+
+        var zeroth_ifd,
+            exif_ifd,
+            interop_ifd,
+            gps_ifd,
+            first_ifd;
+        
+        if ("0th" in exif_dict) {
+            zeroth_ifd = exif_dict["0th"];
+        } else {
+            zeroth_ifd = {};
+        }
+        
+        if ((("Exif" in exif_dict) && (Object.keys(exif_dict["Exif"]).length)) ||
+            (("Interop" in exif_dict) && (Object.keys(exif_dict["Interop"]).length))) {
+            zeroth_ifd[34665] = 1;
+            exif_is = true;
+            exif_ifd = exif_dict["Exif"];
+            if (("Interop" in exif_dict) && Object.keys(exif_dict["Interop"]).length) {
+                exif_ifd[40965] = 1;
+                interop_is = true;
+                interop_ifd = exif_dict["Interop"];
+            } else if (Object.keys(exif_ifd).indexOf(that.ExifIFD.InteroperabilityTag.toString()) > -1) {
+                delete exif_ifd[40965];
+            }
+        } else if (Object.keys(zeroth_ifd).indexOf(that.ImageIFD.ExifTag.toString()) > -1) {
+            delete zeroth_ifd[34665];
+        }
+
+        if (("GPS" in exif_dict) && (Object.keys(exif_dict["GPS"]).length)) {
+            zeroth_ifd[that.ImageIFD.GPSTag] = 1;
+            gps_is = true;
+            gps_ifd = exif_dict["GPS"];
+        } else if (Object.keys(zeroth_ifd).indexOf(that.ImageIFD.GPSTag.toString()) > -1) {
+            delete zeroth_ifd[that.ImageIFD.GPSTag];
+        }
+        
+        if (("1st" in exif_dict) &&
+            ("thumbnail" in exif_dict) &&
+            (exif_dict["thumbnail"] != null)) {
+            first_is = true;
+            exif_dict["1st"][513] = 1;
+            exif_dict["1st"][514] = 1;
+            first_ifd = exif_dict["1st"];
+        }
+        
+        var zeroth_set = _dict_to_bytes(zeroth_ifd, "0th", 0);
+        var zeroth_length = (zeroth_set[0].length + exif_is * 12 + gps_is * 12 + 4 +
+            zeroth_set[1].length);
+
+        var exif_set,
+            exif_bytes = "",
+            exif_length = 0,
+            gps_set,
+            gps_bytes = "",
+            gps_length = 0,
+            interop_set,
+            interop_bytes = "",
+            interop_length = 0,
+            first_set,
+            first_bytes = "",
+            thumbnail;
+        if (exif_is) {
+            exif_set = _dict_to_bytes(exif_ifd, "Exif", zeroth_length);
+            exif_length = exif_set[0].length + interop_is * 12 + exif_set[1].length;
+        }
+        if (gps_is) {
+            gps_set = _dict_to_bytes(gps_ifd, "GPS", zeroth_length + exif_length);
+            gps_bytes = gps_set.join("");
+            gps_length = gps_bytes.length;
+        }
+        if (interop_is) {
+            var offset = zeroth_length + exif_length + gps_length;
+            interop_set = _dict_to_bytes(interop_ifd, "Interop", offset);
+            interop_bytes = interop_set.join("");
+            interop_length = interop_bytes.length;
+        }
+        if (first_is) {
+            var offset = zeroth_length + exif_length + gps_length + interop_length;
+            first_set = _dict_to_bytes(first_ifd, "1st", offset);
+            thumbnail = _get_thumbnail(exif_dict["thumbnail"]);
+            if (thumbnail.length > 64000) {
+                throw new Error("Given thumbnail is too large. max 64kB");
+            }
+        }
+
+        var exif_pointer = "",
+            gps_pointer = "",
+            interop_pointer = "",
+            first_ifd_pointer = "\x00\x00\x00\x00";
+        if (exif_is) {
+            var pointer_value = TIFF_HEADER_LENGTH + zeroth_length;
+            var pointer_str = pack(">L", [pointer_value]);
+            var key = 34665;
+            var key_str = pack(">H", [key]);
+            var type_str = pack(">H", [TYPES["Long"]]);
+            var length_str = pack(">L", [1]);
+            exif_pointer = key_str + type_str + length_str + pointer_str;
+        }
+        if (gps_is) {
+            var pointer_value = TIFF_HEADER_LENGTH + zeroth_length + exif_length;
+            var pointer_str = pack(">L", [pointer_value]);
+            var key = 34853;
+            var key_str = pack(">H", [key]);
+            var type_str = pack(">H", [TYPES["Long"]]);
+            var length_str = pack(">L", [1]);
+            gps_pointer = key_str + type_str + length_str + pointer_str;
+        }
+        if (interop_is) {
+            var pointer_value = (TIFF_HEADER_LENGTH +
+                zeroth_length + exif_length + gps_length);
+            var pointer_str = pack(">L", [pointer_value]);
+            var key = 40965;
+            var key_str = pack(">H", [key]);
+            var type_str = pack(">H", [TYPES["Long"]]);
+            var length_str = pack(">L", [1]);
+            interop_pointer = key_str + type_str + length_str + pointer_str;
+        }
+        if (first_is) {
+            var pointer_value = (TIFF_HEADER_LENGTH + zeroth_length +
+                exif_length + gps_length + interop_length);
+            first_ifd_pointer = pack(">L", [pointer_value]);
+            var thumbnail_pointer = (pointer_value + first_set[0].length + 24 +
+                4 + first_set[1].length);
+            var thumbnail_p_bytes = ("\x02\x01\x00\x04\x00\x00\x00\x01" +
+                pack(">L", [thumbnail_pointer]));
+            var thumbnail_length_bytes = ("\x02\x02\x00\x04\x00\x00\x00\x01" +
+                pack(">L", [thumbnail.length]));
+            first_bytes = (first_set[0] + thumbnail_p_bytes +
+                thumbnail_length_bytes + "\x00\x00\x00\x00" +
+                first_set[1] + thumbnail);
+        }
+
+        var zeroth_bytes = (zeroth_set[0] + exif_pointer + gps_pointer +
+            first_ifd_pointer + zeroth_set[1]);
+        if (exif_is) {
+            exif_bytes = exif_set[0] + interop_pointer + exif_set[1];
+        }
+
+        return (header + zeroth_bytes + exif_bytes + gps_bytes +
+            interop_bytes + first_bytes);
+    };
+
+
+    function copy(obj) {
+        return JSON.parse(JSON.stringify(obj));
+    }
+
+
+    function _get_thumbnail(jpeg) {
+        var segments = splitIntoSegments(jpeg);
+        while (("\xff\xe0" <= segments[1].slice(0, 2)) && (segments[1].slice(0, 2) <= "\xff\xef")) {
+            segments = [segments[0]].concat(segments.slice(2));
+        }
+        return segments.join("");
+    }
+
+
+    function _pack_byte(array) {
+        return pack(">" + nStr("B", array.length), array);
+    }
+
+
+    function _pack_short(array) {
+        return pack(">" + nStr("H", array.length), array);
+    }
+
+
+    function _pack_long(array) {
+        return pack(">" + nStr("L", array.length), array);
+    }
+
+
+    function _value_to_bytes(raw_value, value_type, offset) {
+        var four_bytes_over = "";
+        var value_str = "";
+        var length,
+            new_value,
+            num,
+            den;
+
+        if (value_type == "Byte") {
+            length = raw_value.length;
+            if (length <= 4) {
+                value_str = (_pack_byte(raw_value) +
+                    nStr("\x00", 4 - length));
+            } else {
+                value_str = pack(">L", [offset]);
+                four_bytes_over = _pack_byte(raw_value);
+            }
+        } else if (value_type == "Short") {
+            length = raw_value.length;
+            if (length <= 2) {
+                value_str = (_pack_short(raw_value) +
+                    nStr("\x00\x00", 2 - length));
+            } else {
+                value_str = pack(">L", [offset]);
+                four_bytes_over = _pack_short(raw_value);
+            }
+        } else if (value_type == "Long") {
+            length = raw_value.length;
+            if (length <= 1) {
+                value_str = _pack_long(raw_value);
+            } else {
+                value_str = pack(">L", [offset]);
+                four_bytes_over = _pack_long(raw_value);
+            }
+        } else if (value_type == "Ascii") {
+            new_value = raw_value + "\x00";
+            length = new_value.length;
+            if (length > 4) {
+                value_str = pack(">L", [offset]);
+                four_bytes_over = new_value;
+            } else {
+                value_str = new_value + nStr("\x00", 4 - length);
+            }
+        } else if (value_type == "Rational") {
+            if (typeof (raw_value[0]) == "number") {
+                length = 1;
+                num = raw_value[0];
+                den = raw_value[1];
+                new_value = pack(">L", [num]) + pack(">L", [den]);
+            } else {
+                length = raw_value.length;
+                new_value = "";
+                for (var n = 0; n < length; n++) {
+                    num = raw_value[n][0];
+                    den = raw_value[n][1];
+                    new_value += (pack(">L", [num]) +
+                        pack(">L", [den]));
+                }
+            }
+            value_str = pack(">L", [offset]);
+            four_bytes_over = new_value;
+        } else if (value_type == "SRational") {
+            if (typeof (raw_value[0]) == "number") {
+                length = 1;
+                num = raw_value[0];
+                den = raw_value[1];
+                new_value = pack(">l", [num]) + pack(">l", [den]);
+            } else {
+                length = raw_value.length;
+                new_value = "";
+                for (var n = 0; n < length; n++) {
+                    num = raw_value[n][0];
+                    den = raw_value[n][1];
+                    new_value += (pack(">l", [num]) +
+                        pack(">l", [den]));
+                }
+            }
+            value_str = pack(">L", [offset]);
+            four_bytes_over = new_value;
+        } else if (value_type == "Undefined") {
+            length = raw_value.length;
+            if (length > 4) {
+                value_str = pack(">L", [offset]);
+                four_bytes_over = raw_value;
+            } else {
+                value_str = raw_value + nStr("\x00", 4 - length);
+            }
+        }
+
+        var length_str = pack(">L", [length]);
+
+        return [length_str, value_str, four_bytes_over];
+    }
+
+    function _dict_to_bytes(ifd_dict, ifd, ifd_offset) {
+        var TIFF_HEADER_LENGTH = 8;
+        var tag_count = Object.keys(ifd_dict).length;
+        var entry_header = pack(">H", [tag_count]);
+        var entries_length;
+        if (["0th", "1st"].indexOf(ifd) > -1) {
+            entries_length = 2 + tag_count * 12 + 4;
+        } else {
+            entries_length = 2 + tag_count * 12;
+        }
+        var entries = "";
+        var values = "";
+        var key;
+
+        for (var key in ifd_dict) {
+            if (typeof (key) == "string") {
+                key = parseInt(key);
+            }
+            if ((ifd == "0th") && ([34665, 34853].indexOf(key) > -1)) {
+                continue;
+            } else if ((ifd == "Exif") && (key == 40965)) {
+                continue;
+            } else if ((ifd == "1st") && ([513, 514].indexOf(key) > -1)) {
+                continue;
+            }
+
+            var raw_value = ifd_dict[key];
+            var key_str = pack(">H", [key]);
+            var value_type = TAGS[ifd][key]["type"];
+            var type_str = pack(">H", [TYPES[value_type]]);
+
+            if (typeof (raw_value) == "number") {
+                raw_value = [raw_value];
+            }
+            var offset = TIFF_HEADER_LENGTH + entries_length + ifd_offset + values.length;
+            var b = _value_to_bytes(raw_value, value_type, offset);
+            var length_str = b[0];
+            var value_str = b[1];
+            var four_bytes_over = b[2];
+
+            entries += key_str + type_str + length_str + value_str;
+            values += four_bytes_over;
+        }
+
+        return [entry_header + entries, values];
+    }
+
+
+
+    function ExifReader(data) {
+        var segments,
+            app1;
+        if (data.slice(0, 2) == "\xff\xd8") { // JPEG
+            segments = splitIntoSegments(data);
+            app1 = getExifSeg(segments);
+            if (app1) {
+                this.tiftag = app1.slice(10);
+            } else {
+                this.tiftag = null;
+            }
+        } else if (["\x49\x49", "\x4d\x4d"].indexOf(data.slice(0, 2)) > -1) { // TIFF
+            this.tiftag = data;
+        } else if (data.slice(0, 4) == "Exif") { // Exif
+            this.tiftag = data.slice(6);
+        } else {
+            throw new Error("Given file is neither JPEG nor TIFF.");
+        }
+    }
+
+    ExifReader.prototype = {
+        get_ifd: function (pointer, ifd_name) {
+            var ifd_dict = {};
+            var tag_count = unpack(this.endian_mark + "H",
+                this.tiftag.slice(pointer, pointer + 2))[0];
+            var offset = pointer + 2;
+            var t;
+            if (["0th", "1st"].indexOf(ifd_name) > -1) {
+                t = "Image";
+            } else {
+                t = ifd_name;
+            }
+
+            for (var x = 0; x < tag_count; x++) {
+                pointer = offset + 12 * x;
+                var tag = unpack(this.endian_mark + "H",
+                    this.tiftag.slice(pointer, pointer + 2))[0];
+                var value_type = unpack(this.endian_mark + "H",
+                    this.tiftag.slice(pointer + 2, pointer + 4))[0];
+                var value_num = unpack(this.endian_mark + "L",
+                    this.tiftag.slice(pointer + 4, pointer + 8))[0];
+                var value = this.tiftag.slice(pointer + 8, pointer + 12);
+
+                var v_set = [value_type, value_num, value];
+                if (tag in TAGS[t]) {
+                    ifd_dict[tag] = this.convert_value(v_set);
+                }
+            }
+
+            if (ifd_name == "0th") {
+                pointer = offset + 12 * tag_count;
+                ifd_dict["first_ifd_pointer"] = this.tiftag.slice(pointer, pointer + 4);
+            }
+
+            return ifd_dict;
+        },
+
+        convert_value: function (val) {
+            var data = null;
+            var t = val[0];
+            var length = val[1];
+            var value = val[2];
+            var pointer;
+
+            if (t == 1) { // BYTE
+                if (length > 4) {
+                    pointer = unpack(this.endian_mark + "L", value)[0];
+                    data = unpack(this.endian_mark + nStr("B", length),
+                        this.tiftag.slice(pointer, pointer + length));
+                } else {
+                    data = unpack(this.endian_mark + nStr("B", length), value.slice(0, length));
+                }
+            } else if (t == 2) { // ASCII
+                if (length > 4) {
+                    pointer = unpack(this.endian_mark + "L", value)[0];
+                    data = this.tiftag.slice(pointer, pointer + length - 1);
+                } else {
+                    data = value.slice(0, length - 1);
+                }
+            } else if (t == 3) { // SHORT
+                if (length > 2) {
+                    pointer = unpack(this.endian_mark + "L", value)[0];
+                    data = unpack(this.endian_mark + nStr("H", length),
+                        this.tiftag.slice(pointer, pointer + length * 2));
+                } else {
+                    data = unpack(this.endian_mark + nStr("H", length),
+                        value.slice(0, length * 2));
+                }
+            } else if (t == 4) { // LONG
+                if (length > 1) {
+                    pointer = unpack(this.endian_mark + "L", value)[0];
+                    data = unpack(this.endian_mark + nStr("L", length),
+                        this.tiftag.slice(pointer, pointer + length * 4));
+                } else {
+                    data = unpack(this.endian_mark + nStr("L", length),
+                        value);
+                }
+            } else if (t == 5) { // RATIONAL
+                pointer = unpack(this.endian_mark + "L", value)[0];
+                if (length > 1) {
+                    data = [];
+                    for (var x = 0; x < length; x++) {
+                        data.push([unpack(this.endian_mark + "L",
+                                this.tiftag.slice(pointer + x * 8, pointer + 4 + x * 8))[0],
+                                   unpack(this.endian_mark + "L",
+                                this.tiftag.slice(pointer + 4 + x * 8, pointer + 8 + x * 8))[0]
+                                   ]);
+                    }
+                } else {
+                    data = [unpack(this.endian_mark + "L",
+                            this.tiftag.slice(pointer, pointer + 4))[0],
+                            unpack(this.endian_mark + "L",
+                            this.tiftag.slice(pointer + 4, pointer + 8))[0]
+                            ];
+                }
+            } else if (t == 7) { // UNDEFINED BYTES
+                if (length > 4) {
+                    pointer = unpack(this.endian_mark + "L", value)[0];
+                    data = this.tiftag.slice(pointer, pointer + length);
+                } else {
+                    data = value.slice(0, length);
+                }
+            } else if (t == 9) { // SLONG
+                if (length > 1) {
+                    pointer = unpack(this.endian_mark + "L", value)[0];
+                    data = unpack(this.endian_mark + nStr("l", length),
+                        this.tiftag.slice(pointer, pointer + length * 4));
+                } else {
+                    data = unpack(this.endian_mark + nStr("l", length),
+                        value);
+                }
+            } else if (t == 10) { // SRATIONAL
+                pointer = unpack(this.endian_mark + "L", value)[0];
+                if (length > 1) {
+                    data = [];
+                    for (var x = 0; x < length; x++) {
+                        data.push([unpack(this.endian_mark + "l",
+                                this.tiftag.slice(pointer + x * 8, pointer + 4 + x * 8))[0],
+                                   unpack(this.endian_mark + "l",
+                                this.tiftag.slice(pointer + 4 + x * 8, pointer + 8 + x * 8))[0]
+                                  ]);
+                    }
+                } else {
+                    data = [unpack(this.endian_mark + "l",
+                            this.tiftag.slice(pointer, pointer + 4))[0],
+                            unpack(this.endian_mark + "l",
+                            this.tiftag.slice(pointer + 4, pointer + 8))[0]
+                           ];
+                }
+            } else {
+                throw new Error("Exif might be wrong. Got incorrect value " +
+                    "type to decode. type:" + t);
+            }
+
+            if ((data instanceof Array) && (data.length == 1)) {
+                return data[0];
+            } else {
+                return data;
+            }
+        },
+    };
+
+
+    if (typeof window !== "undefined" && typeof window.btoa === "function") {
+        var btoa = window.btoa;
+    }
+    if (typeof btoa === "undefined") {
+        var btoa = function (input) {        var output = "";
+            var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+            var i = 0;
+            var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+
+            while (i < input.length) {
+
+                chr1 = input.charCodeAt(i++);
+                chr2 = input.charCodeAt(i++);
+                chr3 = input.charCodeAt(i++);
+
+                enc1 = chr1 >> 2;
+                enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+                enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+                enc4 = chr3 & 63;
+
+                if (isNaN(chr2)) {
+                    enc3 = enc4 = 64;
+                } else if (isNaN(chr3)) {
+                    enc4 = 64;
+                }
+
+                output = output +
+                keyStr.charAt(enc1) + keyStr.charAt(enc2) +
+                keyStr.charAt(enc3) + keyStr.charAt(enc4);
+
+            }
+
+            return output;
+        };
+    }
+    
+    
+    if (typeof window !== "undefined" && typeof window.atob === "function") {
+        var atob = window.atob;
+    }
+    if (typeof atob === "undefined") {
+        var atob = function (input) {
+            var output = "";
+            var chr1, chr2, chr3;
+            var enc1, enc2, enc3, enc4;
+            var i = 0;
+            var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+
+            input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+            while (i < input.length) {
+
+                enc1 = keyStr.indexOf(input.charAt(i++));
+                enc2 = keyStr.indexOf(input.charAt(i++));
+                enc3 = keyStr.indexOf(input.charAt(i++));
+                enc4 = keyStr.indexOf(input.charAt(i++));
+
+                chr1 = (enc1 << 2) | (enc2 >> 4);
+                chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+                chr3 = ((enc3 & 3) << 6) | enc4;
+
+                output = output + String.fromCharCode(chr1);
+
+                if (enc3 != 64) {
+                    output = output + String.fromCharCode(chr2);
+                }
+                if (enc4 != 64) {
+                    output = output + String.fromCharCode(chr3);
+                }
+
+            }
+
+            return output;
+        };
+    }
+
+
+    function getImageSize(imageArray) {
+        var segments = slice2Segments(imageArray);
+        var seg,
+            width,
+            height,
+            SOF = [192, 193, 194, 195, 197, 198, 199, 201, 202, 203, 205, 206, 207];
+
+        for (var x = 0; x < segments.length; x++) {
+            seg = segments[x];
+            if (SOF.indexOf(seg[1]) >= 0) {
+                height = seg[5] * 256 + seg[6];
+                width = seg[7] * 256 + seg[8];
+                break;
+            }
+        }
+        return [width, height];
+    }
+
+
+    function pack(mark, array) {
+        if (!(array instanceof Array)) {
+            throw new Error("'pack' error. Got invalid type argument.");
+        }
+        if ((mark.length - 1) != array.length) {
+            throw new Error("'pack' error. " + (mark.length - 1) + " marks, " + array.length + " elements.");
+        }
+
+        var littleEndian;
+        if (mark[0] == "<") {
+            littleEndian = true;
+        } else if (mark[0] == ">") {
+            littleEndian = false;
+        } else {
+            throw new Error("");
+        }
+        var packed = "";
+        var p = 1;
+        var val = null;
+        var c = null;
+        var valStr = null;
+
+        while (c = mark[p]) {
+            if (c.toLowerCase() == "b") {
+                val = array[p - 1];
+                if ((c == "b") && (val < 0)) {
+                    val += 0x100;
+                }
+                if ((val > 0xff) || (val < 0)) {
+                    throw new Error("'pack' error.");
+                } else {
+                    valStr = String.fromCharCode(val);
+                }
+            } else if (c == "H") {
+                val = array[p - 1];
+                if ((val > 0xffff) || (val < 0)) {
+                    throw new Error("'pack' error.");
+                } else {
+                    valStr = String.fromCharCode(Math.floor((val % 0x10000) / 0x100)) +
+                        String.fromCharCode(val % 0x100);
+                    if (littleEndian) {
+                        valStr = valStr.split("").reverse().join("");
+                    }
+                }
+            } else if (c.toLowerCase() == "l") {
+                val = array[p - 1];
+                if ((c == "l") && (val < 0)) {
+                    val += 0x100000000;
+                }
+                if ((val > 0xffffffff) || (val < 0)) {
+                    throw new Error("'pack' error.");
+                } else {
+                    valStr = String.fromCharCode(Math.floor(val / 0x1000000)) +
+                        String.fromCharCode(Math.floor((val % 0x1000000) / 0x10000)) +
+                        String.fromCharCode(Math.floor((val % 0x10000) / 0x100)) +
+                        String.fromCharCode(val % 0x100);
+                    if (littleEndian) {
+                        valStr = valStr.split("").reverse().join("");
+                    }
+                }
+            } else {
+                throw new Error("'pack' error.");
+            }
+
+            packed += valStr;
+            p += 1;
+        }
+
+        return packed;
+    }
+
+    function unpack(mark, str) {
+        if (typeof (str) != "string") {
+            throw new Error("'unpack' error. Got invalid type argument.");
+        }
+        var l = 0;
+        for (var markPointer = 1; markPointer < mark.length; markPointer++) {
+            if (mark[markPointer].toLowerCase() == "b") {
+                l += 1;
+            } else if (mark[markPointer].toLowerCase() == "h") {
+                l += 2;
+            } else if (mark[markPointer].toLowerCase() == "l") {
+                l += 4;
+            } else {
+                throw new Error("'unpack' error. Got invalid mark.");
+            }
+        }
+
+        if (l != str.length) {
+            throw new Error("'unpack' error. Mismatch between symbol and string length. " + l + ":" + str.length);
+        }
+
+        var littleEndian;
+        if (mark[0] == "<") {
+            littleEndian = true;
+        } else if (mark[0] == ">") {
+            littleEndian = false;
+        } else {
+            throw new Error("'unpack' error.");
+        }
+        var unpacked = [];
+        var strPointer = 0;
+        var p = 1;
+        var val = null;
+        var c = null;
+        var length = null;
+        var sliced = "";
+
+        while (c = mark[p]) {
+            if (c.toLowerCase() == "b") {
+                length = 1;
+                sliced = str.slice(strPointer, strPointer + length);
+                val = sliced.charCodeAt(0);
+                if ((c == "b") && (val >= 0x80)) {
+                    val -= 0x100;
+                }
+            } else if (c == "H") {
+                length = 2;
+                sliced = str.slice(strPointer, strPointer + length);
+                if (littleEndian) {
+                    sliced = sliced.split("").reverse().join("");
+                }
+                val = sliced.charCodeAt(0) * 0x100 +
+                    sliced.charCodeAt(1);
+            } else if (c.toLowerCase() == "l") {
+                length = 4;
+                sliced = str.slice(strPointer, strPointer + length);
+                if (littleEndian) {
+                    sliced = sliced.split("").reverse().join("");
+                }
+                val = sliced.charCodeAt(0) * 0x1000000 +
+                    sliced.charCodeAt(1) * 0x10000 +
+                    sliced.charCodeAt(2) * 0x100 +
+                    sliced.charCodeAt(3);
+                if ((c == "l") && (val >= 0x80000000)) {
+                    val -= 0x100000000;
+                }
+            } else {
+                throw new Error("'unpack' error. " + c);
+            }
+
+            unpacked.push(val);
+            strPointer += length;
+            p += 1;
+        }
+
+        return unpacked;
+    }
+
+    function nStr(ch, num) {
+        var str = "";
+        for (var i = 0; i < num; i++) {
+            str += ch;
+        }
+        return str;
+    }
+
+    function splitIntoSegments(data) {
+        if (data.slice(0, 2) != "\xff\xd8") {
+            throw new Error("Given data isn't JPEG.");
+        }
+
+        var head = 2;
+        var segments = ["\xff\xd8"];
+        while (true) {
+            if (data.slice(head, head + 2) == "\xff\xda") {
+                segments.push(data.slice(head));
+                break;
+            } else {
+                var length = unpack(">H", data.slice(head + 2, head + 4))[0];
+                var endPoint = head + length + 2;
+                segments.push(data.slice(head, endPoint));
+                head = endPoint;
+            }
+
+            if (head >= data.length) {
+                throw new Error("Wrong JPEG data.");
+            }
+        }
+        return segments;
+    }
+
+
+    function getExifSeg(segments) {
+        var seg;
+        for (var i = 0; i < segments.length; i++) {
+            seg = segments[i];
+            if (seg.slice(0, 2) == "\xff\xe1" &&
+                   seg.slice(4, 10) == "Exif\x00\x00") {
+                return seg;
+            }
+        }
+        return null;
+    }
+
+
+    function mergeSegments(segments, exif) {
+        var hasExifSegment = false;
+        var additionalAPP1ExifSegments = [];
+
+        segments.forEach(function(segment, i) {
+            // Replace first occurence of APP1:Exif segment
+            if (segment.slice(0, 2) == "\xff\xe1" &&
+                segment.slice(4, 10) == "Exif\x00\x00"
+            ) {
+                if (!hasExifSegment) {
+                    segments[i] = exif;
+                    hasExifSegment = true;
+                } else {
+                    additionalAPP1ExifSegments.unshift(i);
+                }
+            }
+        });
+
+        // Remove additional occurences of APP1:Exif segment
+        additionalAPP1ExifSegments.forEach(function(segmentIndex) {
+            segments.splice(segmentIndex, 1);
+        });
+
+        if (!hasExifSegment && exif) {
+            segments = [segments[0], exif].concat(segments.slice(1));
+        }
+
+        return segments.join("");
+    }
+
+
+    function toHex(str) {
+        var hexStr = "";
+        for (var i = 0; i < str.length; i++) {
+            var h = str.charCodeAt(i);
+            var hex = ((h < 10) ? "0" : "") + h.toString(16);
+            hexStr += hex + " ";
+        }
+        return hexStr;
+    }
+
+
+    var TYPES = {
+        "Byte": 1,
+        "Ascii": 2,
+        "Short": 3,
+        "Long": 4,
+        "Rational": 5,
+        "Undefined": 7,
+        "SLong": 9,
+        "SRational": 10
+    };
+
+
+    var TAGS = {
+        'Image': {
+            11: {
+                'name': 'ProcessingSoftware',
+                'type': 'Ascii'
+            },
+            254: {
+                'name': 'NewSubfileType',
+                'type': 'Long'
+            },
+            255: {
+                'name': 'SubfileType',
+                'type': 'Short'
+            },
+            256: {
+                'name': 'ImageWidth',
+                'type': 'Long'
+            },
+            257: {
+                'name': 'ImageLength',
+                'type': 'Long'
+            },
+            258: {
+                'name': 'BitsPerSample',
+                'type': 'Short'
+            },
+            259: {
+                'name': 'Compression',
+                'type': 'Short'
+            },
+            262: {
+                'name': 'PhotometricInterpretation',
+                'type': 'Short'
+            },
+            263: {
+                'name': 'Threshholding',
+                'type': 'Short'
+            },
+            264: {
+                'name': 'CellWidth',
+                'type': 'Short'
+            },
+            265: {
+                'name': 'CellLength',
+                'type': 'Short'
+            },
+            266: {
+                'name': 'FillOrder',
+                'type': 'Short'
+            },
+            269: {
+                'name': 'DocumentName',
+                'type': 'Ascii'
+            },
+            270: {
+                'name': 'ImageDescription',
+                'type': 'Ascii'
+            },
+            271: {
+                'name': 'Make',
+                'type': 'Ascii'
+            },
+            272: {
+                'name': 'Model',
+                'type': 'Ascii'
+            },
+            273: {
+                'name': 'StripOffsets',
+                'type': 'Long'
+            },
+            274: {
+                'name': 'Orientation',
+                'type': 'Short'
+            },
+            277: {
+                'name': 'SamplesPerPixel',
+                'type': 'Short'
+            },
+            278: {
+                'name': 'RowsPerStrip',
+                'type': 'Long'
+            },
+            279: {
+                'name': 'StripByteCounts',
+                'type': 'Long'
+            },
+            282: {
+                'name': 'XResolution',
+                'type': 'Rational'
+            },
+            283: {
+                'name': 'YResolution',
+                'type': 'Rational'
+            },
+            284: {
+                'name': 'PlanarConfiguration',
+                'type': 'Short'
+            },
+            290: {
+                'name': 'GrayResponseUnit',
+                'type': 'Short'
+            },
+            291: {
+                'name': 'GrayResponseCurve',
+                'type': 'Short'
+            },
+            292: {
+                'name': 'T4Options',
+                'type': 'Long'
+            },
+            293: {
+                'name': 'T6Options',
+                'type': 'Long'
+            },
+            296: {
+                'name': 'ResolutionUnit',
+                'type': 'Short'
+            },
+            301: {
+                'name': 'TransferFunction',
+                'type': 'Short'
+            },
+            305: {
+                'name': 'Software',
+                'type': 'Ascii'
+            },
+            306: {
+                'name': 'DateTime',
+                'type': 'Ascii'
+            },
+            315: {
+                'name': 'Artist',
+                'type': 'Ascii'
+            },
+            316: {
+                'name': 'HostComputer',
+                'type': 'Ascii'
+            },
+            317: {
+                'name': 'Predictor',
+                'type': 'Short'
+            },
+            318: {
+                'name': 'WhitePoint',
+                'type': 'Rational'
+            },
+            319: {
+                'name': 'PrimaryChromaticities',
+                'type': 'Rational'
+            },
+            320: {
+                'name': 'ColorMap',
+                'type': 'Short'
+            },
+            321: {
+                'name': 'HalftoneHints',
+                'type': 'Short'
+            },
+            322: {
+                'name': 'TileWidth',
+                'type': 'Short'
+            },
+            323: {
+                'name': 'TileLength',
+                'type': 'Short'
+            },
+            324: {
+                'name': 'TileOffsets',
+                'type': 'Short'
+            },
+            325: {
+                'name': 'TileByteCounts',
+                'type': 'Short'
+            },
+            330: {
+                'name': 'SubIFDs',
+                'type': 'Long'
+            },
+            332: {
+                'name': 'InkSet',
+                'type': 'Short'
+            },
+            333: {
+                'name': 'InkNames',
+                'type': 'Ascii'
+            },
+            334: {
+                'name': 'NumberOfInks',
+                'type': 'Short'
+            },
+            336: {
+                'name': 'DotRange',
+                'type': 'Byte'
+            },
+            337: {
+                'name': 'TargetPrinter',
+                'type': 'Ascii'
+            },
+            338: {
+                'name': 'ExtraSamples',
+                'type': 'Short'
+            },
+            339: {
+                'name': 'SampleFormat',
+                'type': 'Short'
+            },
+            340: {
+                'name': 'SMinSampleValue',
+                'type': 'Short'
+            },
+            341: {
+                'name': 'SMaxSampleValue',
+                'type': 'Short'
+            },
+            342: {
+                'name': 'TransferRange',
+                'type': 'Short'
+            },
+            343: {
+                'name': 'ClipPath',
+                'type': 'Byte'
+            },
+            344: {
+                'name': 'XClipPathUnits',
+                'type': 'Long'
+            },
+            345: {
+                'name': 'YClipPathUnits',
+                'type': 'Long'
+            },
+            346: {
+                'name': 'Indexed',
+                'type': 'Short'
+            },
+            347: {
+                'name': 'JPEGTables',
+                'type': 'Undefined'
+            },
+            351: {
+                'name': 'OPIProxy',
+                'type': 'Short'
+            },
+            512: {
+                'name': 'JPEGProc',
+                'type': 'Long'
+            },
+            513: {
+                'name': 'JPEGInterchangeFormat',
+                'type': 'Long'
+            },
+            514: {
+                'name': 'JPEGInterchangeFormatLength',
+                'type': 'Long'
+            },
+            515: {
+                'name': 'JPEGRestartInterval',
+                'type': 'Short'
+            },
+            517: {
+                'name': 'JPEGLosslessPredictors',
+                'type': 'Short'
+            },
+            518: {
+                'name': 'JPEGPointTransforms',
+                'type': 'Short'
+            },
+            519: {
+                'name': 'JPEGQTables',
+                'type': 'Long'
+            },
+            520: {
+                'name': 'JPEGDCTables',
+                'type': 'Long'
+            },
+            521: {
+                'name': 'JPEGACTables',
+                'type': 'Long'
+            },
+            529: {
+                'name': 'YCbCrCoefficients',
+                'type': 'Rational'
+            },
+            530: {
+                'name': 'YCbCrSubSampling',
+                'type': 'Short'
+            },
+            531: {
+                'name': 'YCbCrPositioning',
+                'type': 'Short'
+            },
+            532: {
+                'name': 'ReferenceBlackWhite',
+                'type': 'Rational'
+            },
+            700: {
+                'name': 'XMLPacket',
+                'type': 'Byte'
+            },
+            18246: {
+                'name': 'Rating',
+                'type': 'Short'
+            },
+            18249: {
+                'name': 'RatingPercent',
+                'type': 'Short'
+            },
+            32781: {
+                'name': 'ImageID',
+                'type': 'Ascii'
+            },
+            33421: {
+                'name': 'CFARepeatPatternDim',
+                'type': 'Short'
+            },
+            33422: {
+                'name': 'CFAPattern',
+                'type': 'Byte'
+            },
+            33423: {
+                'name': 'BatteryLevel',
+                'type': 'Rational'
+            },
+            33432: {
+                'name': 'Copyright',
+                'type': 'Ascii'
+            },
+            33434: {
+                'name': 'ExposureTime',
+                'type': 'Rational'
+            },
+            34377: {
+                'name': 'ImageResources',
+                'type': 'Byte'
+            },
+            34665: {
+                'name': 'ExifTag',
+                'type': 'Long'
+            },
+            34675: {
+                'name': 'InterColorProfile',
+                'type': 'Undefined'
+            },
+            34853: {
+                'name': 'GPSTag',
+                'type': 'Long'
+            },
+            34857: {
+                'name': 'Interlace',
+                'type': 'Short'
+            },
+            34858: {
+                'name': 'TimeZoneOffset',
+                'type': 'Long'
+            },
+            34859: {
+                'name': 'SelfTimerMode',
+                'type': 'Short'
+            },
+            37387: {
+                'name': 'FlashEnergy',
+                'type': 'Rational'
+            },
+            37388: {
+                'name': 'SpatialFrequencyResponse',
+                'type': 'Undefined'
+            },
+            37389: {
+                'name': 'Noise',
+                'type': 'Undefined'
+            },
+            37390: {
+                'name': 'FocalPlaneXResolution',
+                'type': 'Rational'
+            },
+            37391: {
+                'name': 'FocalPlaneYResolution',
+                'type': 'Rational'
+            },
+            37392: {
+                'name': 'FocalPlaneResolutionUnit',
+                'type': 'Short'
+            },
+            37393: {
+                'name': 'ImageNumber',
+                'type': 'Long'
+            },
+            37394: {
+                'name': 'SecurityClassification',
+                'type': 'Ascii'
+            },
+            37395: {
+                'name': 'ImageHistory',
+                'type': 'Ascii'
+            },
+            37397: {
+                'name': 'ExposureIndex',
+                'type': 'Rational'
+            },
+            37398: {
+                'name': 'TIFFEPStandardID',
+                'type': 'Byte'
+            },
+            37399: {
+                'name': 'SensingMethod',
+                'type': 'Short'
+            },
+            40091: {
+                'name': 'XPTitle',
+                'type': 'Byte'
+            },
+            40092: {
+                'name': 'XPComment',
+                'type': 'Byte'
+            },
+            40093: {
+                'name': 'XPAuthor',
+                'type': 'Byte'
+            },
+            40094: {
+                'name': 'XPKeywords',
+                'type': 'Byte'
+            },
+            40095: {
+                'name': 'XPSubject',
+                'type': 'Byte'
+            },
+            50341: {
+                'name': 'PrintImageMatching',
+                'type': 'Undefined'
+            },
+            50706: {
+                'name': 'DNGVersion',
+                'type': 'Byte'
+            },
+            50707: {
+                'name': 'DNGBackwardVersion',
+                'type': 'Byte'
+            },
+            50708: {
+                'name': 'UniqueCameraModel',
+                'type': 'Ascii'
+            },
+            50709: {
+                'name': 'LocalizedCameraModel',
+                'type': 'Byte'
+            },
+            50710: {
+                'name': 'CFAPlaneColor',
+                'type': 'Byte'
+            },
+            50711: {
+                'name': 'CFALayout',
+                'type': 'Short'
+            },
+            50712: {
+                'name': 'LinearizationTable',
+                'type': 'Short'
+            },
+            50713: {
+                'name': 'BlackLevelRepeatDim',
+                'type': 'Short'
+            },
+            50714: {
+                'name': 'BlackLevel',
+                'type': 'Rational'
+            },
+            50715: {
+                'name': 'BlackLevelDeltaH',
+                'type': 'SRational'
+            },
+            50716: {
+                'name': 'BlackLevelDeltaV',
+                'type': 'SRational'
+            },
+            50717: {
+                'name': 'WhiteLevel',
+                'type': 'Short'
+            },
+            50718: {
+                'name': 'DefaultScale',
+                'type': 'Rational'
+            },
+            50719: {
+                'name': 'DefaultCropOrigin',
+                'type': 'Short'
+            },
+            50720: {
+                'name': 'DefaultCropSize',
+                'type': 'Short'
+            },
+            50721: {
+                'name': 'ColorMatrix1',
+                'type': 'SRational'
+            },
+            50722: {
+                'name': 'ColorMatrix2',
+                'type': 'SRational'
+            },
+            50723: {
+                'name': 'CameraCalibration1',
+                'type': 'SRational'
+            },
+            50724: {
+                'name': 'CameraCalibration2',
+                'type': 'SRational'
+            },
+            50725: {
+                'name': 'ReductionMatrix1',
+                'type': 'SRational'
+            },
+            50726: {
+                'name': 'ReductionMatrix2',
+                'type': 'SRational'
+            },
+            50727: {
+                'name': 'AnalogBalance',
+                'type': 'Rational'
+            },
+            50728: {
+                'name': 'AsShotNeutral',
+                'type': 'Short'
+            },
+            50729: {
+                'name': 'AsShotWhiteXY',
+                'type': 'Rational'
+            },
+            50730: {
+                'name': 'BaselineExposure',
+                'type': 'SRational'
+            },
+            50731: {
+                'name': 'BaselineNoise',
+                'type': 'Rational'
+            },
+            50732: {
+                'name': 'BaselineSharpness',
+                'type': 'Rational'
+            },
+            50733: {
+                'name': 'BayerGreenSplit',
+                'type': 'Long'
+            },
+            50734: {
+                'name': 'LinearResponseLimit',
+                'type': 'Rational'
+            },
+            50735: {
+                'name': 'CameraSerialNumber',
+                'type': 'Ascii'
+            },
+            50736: {
+                'name': 'LensInfo',
+                'type': 'Rational'
+            },
+            50737: {
+                'name': 'ChromaBlurRadius',
+                'type': 'Rational'
+            },
+            50738: {
+                'name': 'AntiAliasStrength',
+                'type': 'Rational'
+            },
+            50739: {
+                'name': 'ShadowScale',
+                'type': 'SRational'
+            },
+            50740: {
+                'name': 'DNGPrivateData',
+                'type': 'Byte'
+            },
+            50741: {
+                'name': 'MakerNoteSafety',
+                'type': 'Short'
+            },
+            50778: {
+                'name': 'CalibrationIlluminant1',
+                'type': 'Short'
+            },
+            50779: {
+                'name': 'CalibrationIlluminant2',
+                'type': 'Short'
+            },
+            50780: {
+                'name': 'BestQualityScale',
+                'type': 'Rational'
+            },
+            50781: {
+                'name': 'RawDataUniqueID',
+                'type': 'Byte'
+            },
+            50827: {
+                'name': 'OriginalRawFileName',
+                'type': 'Byte'
+            },
+            50828: {
+                'name': 'OriginalRawFileData',
+                'type': 'Undefined'
+            },
+            50829: {
+                'name': 'ActiveArea',
+                'type': 'Short'
+            },
+            50830: {
+                'name': 'MaskedAreas',
+                'type': 'Short'
+            },
+            50831: {
+                'name': 'AsShotICCProfile',
+                'type': 'Undefined'
+            },
+            50832: {
+                'name': 'AsShotPreProfileMatrix',
+                'type': 'SRational'
+            },
+            50833: {
+                'name': 'CurrentICCProfile',
+                'type': 'Undefined'
+            },
+            50834: {
+                'name': 'CurrentPreProfileMatrix',
+                'type': 'SRational'
+            },
+            50879: {
+                'name': 'ColorimetricReference',
+                'type': 'Short'
+            },
+            50931: {
+                'name': 'CameraCalibrationSignature',
+                'type': 'Byte'
+            },
+            50932: {
+                'name': 'ProfileCalibrationSignature',
+                'type': 'Byte'
+            },
+            50934: {
+                'name': 'AsShotProfileName',
+                'type': 'Byte'
+            },
+            50935: {
+                'name': 'NoiseReductionApplied',
+                'type': 'Rational'
+            },
+            50936: {
+                'name': 'ProfileName',
+                'type': 'Byte'
+            },
+            50937: {
+                'name': 'ProfileHueSatMapDims',
+                'type': 'Long'
+            },
+            50938: {
+                'name': 'ProfileHueSatMapData1',
+                'type': 'Float'
+            },
+            50939: {
+                'name': 'ProfileHueSatMapData2',
+                'type': 'Float'
+            },
+            50940: {
+                'name': 'ProfileToneCurve',
+                'type': 'Float'
+            },
+            50941: {
+                'name': 'ProfileEmbedPolicy',
+                'type': 'Long'
+            },
+            50942: {
+                'name': 'ProfileCopyright',
+                'type': 'Byte'
+            },
+            50964: {
+                'name': 'ForwardMatrix1',
+                'type': 'SRational'
+            },
+            50965: {
+                'name': 'ForwardMatrix2',
+                'type': 'SRational'
+            },
+            50966: {
+                'name': 'PreviewApplicationName',
+                'type': 'Byte'
+            },
+            50967: {
+                'name': 'PreviewApplicationVersion',
+                'type': 'Byte'
+            },
+            50968: {
+                'name': 'PreviewSettingsName',
+                'type': 'Byte'
+            },
+            50969: {
+                'name': 'PreviewSettingsDigest',
+                'type': 'Byte'
+            },
+            50970: {
+                'name': 'PreviewColorSpace',
+                'type': 'Long'
+            },
+            50971: {
+                'name': 'PreviewDateTime',
+                'type': 'Ascii'
+            },
+            50972: {
+                'name': 'RawImageDigest',
+                'type': 'Undefined'
+            },
+            50973: {
+                'name': 'OriginalRawFileDigest',
+                'type': 'Undefined'
+            },
+            50974: {
+                'name': 'SubTileBlockSize',
+                'type': 'Long'
+            },
+            50975: {
+                'name': 'RowInterleaveFactor',
+                'type': 'Long'
+            },
+            50981: {
+                'name': 'ProfileLookTableDims',
+                'type': 'Long'
+            },
+            50982: {
+                'name': 'ProfileLookTableData',
+                'type': 'Float'
+            },
+            51008: {
+                'name': 'OpcodeList1',
+                'type': 'Undefined'
+            },
+            51009: {
+                'name': 'OpcodeList2',
+                'type': 'Undefined'
+            },
+            51022: {
+                'name': 'OpcodeList3',
+                'type': 'Undefined'
+            }
+        },
+        'Exif': {
+            33434: {
+                'name': 'ExposureTime',
+                'type': 'Rational'
+            },
+            33437: {
+                'name': 'FNumber',
+                'type': 'Rational'
+            },
+            34850: {
+                'name': 'ExposureProgram',
+                'type': 'Short'
+            },
+            34852: {
+                'name': 'SpectralSensitivity',
+                'type': 'Ascii'
+            },
+            34855: {
+                'name': 'ISOSpeedRatings',
+                'type': 'Short'
+            },
+            34856: {
+                'name': 'OECF',
+                'type': 'Undefined'
+            },
+            34864: {
+                'name': 'SensitivityType',
+                'type': 'Short'
+            },
+            34865: {
+                'name': 'StandardOutputSensitivity',
+                'type': 'Long'
+            },
+            34866: {
+                'name': 'RecommendedExposureIndex',
+                'type': 'Long'
+            },
+            34867: {
+                'name': 'ISOSpeed',
+                'type': 'Long'
+            },
+            34868: {
+                'name': 'ISOSpeedLatitudeyyy',
+                'type': 'Long'
+            },
+            34869: {
+                'name': 'ISOSpeedLatitudezzz',
+                'type': 'Long'
+            },
+            36864: {
+                'name': 'ExifVersion',
+                'type': 'Undefined'
+            },
+            36867: {
+                'name': 'DateTimeOriginal',
+                'type': 'Ascii'
+            },
+            36868: {
+                'name': 'DateTimeDigitized',
+                'type': 'Ascii'
+            },
+            37121: {
+                'name': 'ComponentsConfiguration',
+                'type': 'Undefined'
+            },
+            37122: {
+                'name': 'CompressedBitsPerPixel',
+                'type': 'Rational'
+            },
+            37377: {
+                'name': 'ShutterSpeedValue',
+                'type': 'SRational'
+            },
+            37378: {
+                'name': 'ApertureValue',
+                'type': 'Rational'
+            },
+            37379: {
+                'name': 'BrightnessValue',
+                'type': 'SRational'
+            },
+            37380: {
+                'name': 'ExposureBiasValue',
+                'type': 'SRational'
+            },
+            37381: {
+                'name': 'MaxApertureValue',
+                'type': 'Rational'
+            },
+            37382: {
+                'name': 'SubjectDistance',
+                'type': 'Rational'
+            },
+            37383: {
+                'name': 'MeteringMode',
+                'type': 'Short'
+            },
+            37384: {
+                'name': 'LightSource',
+                'type': 'Short'
+            },
+            37385: {
+                'name': 'Flash',
+                'type': 'Short'
+            },
+            37386: {
+                'name': 'FocalLength',
+                'type': 'Rational'
+            },
+            37396: {
+                'name': 'SubjectArea',
+                'type': 'Short'
+            },
+            37500: {
+                'name': 'MakerNote',
+                'type': 'Undefined'
+            },
+            37510: {
+                'name': 'UserComment',
+                'type': 'Ascii'
+            },
+            37520: {
+                'name': 'SubSecTime',
+                'type': 'Ascii'
+            },
+            37521: {
+                'name': 'SubSecTimeOriginal',
+                'type': 'Ascii'
+            },
+            37522: {
+                'name': 'SubSecTimeDigitized',
+                'type': 'Ascii'
+            },
+            40960: {
+                'name': 'FlashpixVersion',
+                'type': 'Undefined'
+            },
+            40961: {
+                'name': 'ColorSpace',
+                'type': 'Short'
+            },
+            40962: {
+                'name': 'PixelXDimension',
+                'type': 'Long'
+            },
+            40963: {
+                'name': 'PixelYDimension',
+                'type': 'Long'
+            },
+            40964: {
+                'name': 'RelatedSoundFile',
+                'type': 'Ascii'
+            },
+            40965: {
+                'name': 'InteroperabilityTag',
+                'type': 'Long'
+            },
+            41483: {
+                'name': 'FlashEnergy',
+                'type': 'Rational'
+            },
+            41484: {
+                'name': 'SpatialFrequencyResponse',
+                'type': 'Undefined'
+            },
+            41486: {
+                'name': 'FocalPlaneXResolution',
+                'type': 'Rational'
+            },
+            41487: {
+                'name': 'FocalPlaneYResolution',
+                'type': 'Rational'
+            },
+            41488: {
+                'name': 'FocalPlaneResolutionUnit',
+                'type': 'Short'
+            },
+            41492: {
+                'name': 'SubjectLocation',
+                'type': 'Short'
+            },
+            41493: {
+                'name': 'ExposureIndex',
+                'type': 'Rational'
+            },
+            41495: {
+                'name': 'SensingMethod',
+                'type': 'Short'
+            },
+            41728: {
+                'name': 'FileSource',
+                'type': 'Undefined'
+            },
+            41729: {
+                'name': 'SceneType',
+                'type': 'Undefined'
+            },
+            41730: {
+                'name': 'CFAPattern',
+                'type': 'Undefined'
+            },
+            41985: {
+                'name': 'CustomRendered',
+                'type': 'Short'
+            },
+            41986: {
+                'name': 'ExposureMode',
+                'type': 'Short'
+            },
+            41987: {
+                'name': 'WhiteBalance',
+                'type': 'Short'
+            },
+            41988: {
+                'name': 'DigitalZoomRatio',
+                'type': 'Rational'
+            },
+            41989: {
+                'name': 'FocalLengthIn35mmFilm',
+                'type': 'Short'
+            },
+            41990: {
+                'name': 'SceneCaptureType',
+                'type': 'Short'
+            },
+            41991: {
+                'name': 'GainControl',
+                'type': 'Short'
+            },
+            41992: {
+                'name': 'Contrast',
+                'type': 'Short'
+            },
+            41993: {
+                'name': 'Saturation',
+                'type': 'Short'
+            },
+            41994: {
+                'name': 'Sharpness',
+                'type': 'Short'
+            },
+            41995: {
+                'name': 'DeviceSettingDescription',
+                'type': 'Undefined'
+            },
+            41996: {
+                'name': 'SubjectDistanceRange',
+                'type': 'Short'
+            },
+            42016: {
+                'name': 'ImageUniqueID',
+                'type': 'Ascii'
+            },
+            42032: {
+                'name': 'CameraOwnerName',
+                'type': 'Ascii'
+            },
+            42033: {
+                'name': 'BodySerialNumber',
+                'type': 'Ascii'
+            },
+            42034: {
+                'name': 'LensSpecification',
+                'type': 'Rational'
+            },
+            42035: {
+                'name': 'LensMake',
+                'type': 'Ascii'
+            },
+            42036: {
+                'name': 'LensModel',
+                'type': 'Ascii'
+            },
+            42037: {
+                'name': 'LensSerialNumber',
+                'type': 'Ascii'
+            },
+            42240: {
+                'name': 'Gamma',
+                'type': 'Rational'
+            }
+        },
+        'GPS': {
+            0: {
+                'name': 'GPSVersionID',
+                'type': 'Byte'
+            },
+            1: {
+                'name': 'GPSLatitudeRef',
+                'type': 'Ascii'
+            },
+            2: {
+                'name': 'GPSLatitude',
+                'type': 'Rational'
+            },
+            3: {
+                'name': 'GPSLongitudeRef',
+                'type': 'Ascii'
+            },
+            4: {
+                'name': 'GPSLongitude',
+                'type': 'Rational'
+            },
+            5: {
+                'name': 'GPSAltitudeRef',
+                'type': 'Byte'
+            },
+            6: {
+                'name': 'GPSAltitude',
+                'type': 'Rational'
+            },
+            7: {
+                'name': 'GPSTimeStamp',
+                'type': 'Rational'
+            },
+            8: {
+                'name': 'GPSSatellites',
+                'type': 'Ascii'
+            },
+            9: {
+                'name': 'GPSStatus',
+                'type': 'Ascii'
+            },
+            10: {
+                'name': 'GPSMeasureMode',
+                'type': 'Ascii'
+            },
+            11: {
+                'name': 'GPSDOP',
+                'type': 'Rational'
+            },
+            12: {
+                'name': 'GPSSpeedRef',
+                'type': 'Ascii'
+            },
+            13: {
+                'name': 'GPSSpeed',
+                'type': 'Rational'
+            },
+            14: {
+                'name': 'GPSTrackRef',
+                'type': 'Ascii'
+            },
+            15: {
+                'name': 'GPSTrack',
+                'type': 'Rational'
+            },
+            16: {
+                'name': 'GPSImgDirectionRef',
+                'type': 'Ascii'
+            },
+            17: {
+                'name': 'GPSImgDirection',
+                'type': 'Rational'
+            },
+            18: {
+                'name': 'GPSMapDatum',
+                'type': 'Ascii'
+            },
+            19: {
+                'name': 'GPSDestLatitudeRef',
+                'type': 'Ascii'
+            },
+            20: {
+                'name': 'GPSDestLatitude',
+                'type': 'Rational'
+            },
+            21: {
+                'name': 'GPSDestLongitudeRef',
+                'type': 'Ascii'
+            },
+            22: {
+                'name': 'GPSDestLongitude',
+                'type': 'Rational'
+            },
+            23: {
+                'name': 'GPSDestBearingRef',
+                'type': 'Ascii'
+            },
+            24: {
+                'name': 'GPSDestBearing',
+                'type': 'Rational'
+            },
+            25: {
+                'name': 'GPSDestDistanceRef',
+                'type': 'Ascii'
+            },
+            26: {
+                'name': 'GPSDestDistance',
+                'type': 'Rational'
+            },
+            27: {
+                'name': 'GPSProcessingMethod',
+                'type': 'Undefined'
+            },
+            28: {
+                'name': 'GPSAreaInformation',
+                'type': 'Undefined'
+            },
+            29: {
+                'name': 'GPSDateStamp',
+                'type': 'Ascii'
+            },
+            30: {
+                'name': 'GPSDifferential',
+                'type': 'Short'
+            },
+            31: {
+                'name': 'GPSHPositioningError',
+                'type': 'Rational'
+            }
+        },
+        'Interop': {
+            1: {
+                'name': 'InteroperabilityIndex',
+                'type': 'Ascii'
+            }
+        },
+    };
+    TAGS["0th"] = TAGS["Image"];
+    TAGS["1st"] = TAGS["Image"];
+    that.TAGS = TAGS;
+
+    
+    that.ImageIFD = {
+        ProcessingSoftware:11,
+        NewSubfileType:254,
+        SubfileType:255,
+        ImageWidth:256,
+        ImageLength:257,
+        BitsPerSample:258,
+        Compression:259,
+        PhotometricInterpretation:262,
+        Threshholding:263,
+        CellWidth:264,
+        CellLength:265,
+        FillOrder:266,
+        DocumentName:269,
+        ImageDescription:270,
+        Make:271,
+        Model:272,
+        StripOffsets:273,
+        Orientation:274,
+        SamplesPerPixel:277,
+        RowsPerStrip:278,
+        StripByteCounts:279,
+        XResolution:282,
+        YResolution:283,
+        PlanarConfiguration:284,
+        GrayResponseUnit:290,
+        GrayResponseCurve:291,
+        T4Options:292,
+        T6Options:293,
+        ResolutionUnit:296,
+        TransferFunction:301,
+        Software:305,
+        DateTime:306,
+        Artist:315,
+        HostComputer:316,
+        Predictor:317,
+        WhitePoint:318,
+        PrimaryChromaticities:319,
+        ColorMap:320,
+        HalftoneHints:321,
+        TileWidth:322,
+        TileLength:323,
+        TileOffsets:324,
+        TileByteCounts:325,
+        SubIFDs:330,
+        InkSet:332,
+        InkNames:333,
+        NumberOfInks:334,
+        DotRange:336,
+        TargetPrinter:337,
+        ExtraSamples:338,
+        SampleFormat:339,
+        SMinSampleValue:340,
+        SMaxSampleValue:341,
+        TransferRange:342,
+        ClipPath:343,
+        XClipPathUnits:344,
+        YClipPathUnits:345,
+        Indexed:346,
+        JPEGTables:347,
+        OPIProxy:351,
+        JPEGProc:512,
+        JPEGInterchangeFormat:513,
+        JPEGInterchangeFormatLength:514,
+        JPEGRestartInterval:515,
+        JPEGLosslessPredictors:517,
+        JPEGPointTransforms:518,
+        JPEGQTables:519,
+        JPEGDCTables:520,
+        JPEGACTables:521,
+        YCbCrCoefficients:529,
+        YCbCrSubSampling:530,
+        YCbCrPositioning:531,
+        ReferenceBlackWhite:532,
+        XMLPacket:700,
+        Rating:18246,
+        RatingPercent:18249,
+        ImageID:32781,
+        CFARepeatPatternDim:33421,
+        CFAPattern:33422,
+        BatteryLevel:33423,
+        Copyright:33432,
+        ExposureTime:33434,
+        ImageResources:34377,
+        ExifTag:34665,
+        InterColorProfile:34675,
+        GPSTag:34853,
+        Interlace:34857,
+        TimeZoneOffset:34858,
+        SelfTimerMode:34859,
+        FlashEnergy:37387,
+        SpatialFrequencyResponse:37388,
+        Noise:37389,
+        FocalPlaneXResolution:37390,
+        FocalPlaneYResolution:37391,
+        FocalPlaneResolutionUnit:37392,
+        ImageNumber:37393,
+        SecurityClassification:37394,
+        ImageHistory:37395,
+        ExposureIndex:37397,
+        TIFFEPStandardID:37398,
+        SensingMethod:37399,
+        XPTitle:40091,
+        XPComment:40092,
+        XPAuthor:40093,
+        XPKeywords:40094,
+        XPSubject:40095,
+        PrintImageMatching:50341,
+        DNGVersion:50706,
+        DNGBackwardVersion:50707,
+        UniqueCameraModel:50708,
+        LocalizedCameraModel:50709,
+        CFAPlaneColor:50710,
+        CFALayout:50711,
+        LinearizationTable:50712,
+        BlackLevelRepeatDim:50713,
+        BlackLevel:50714,
+        BlackLevelDeltaH:50715,
+        BlackLevelDeltaV:50716,
+        WhiteLevel:50717,
+        DefaultScale:50718,
+        DefaultCropOrigin:50719,
+        DefaultCropSize:50720,
+        ColorMatrix1:50721,
+        ColorMatrix2:50722,
+        CameraCalibration1:50723,
+        CameraCalibration2:50724,
+        ReductionMatrix1:50725,
+        ReductionMatrix2:50726,
+        AnalogBalance:50727,
+        AsShotNeutral:50728,
+        AsShotWhiteXY:50729,
+        BaselineExposure:50730,
+        BaselineNoise:50731,
+        BaselineSharpness:50732,
+        BayerGreenSplit:50733,
+        LinearResponseLimit:50734,
+        CameraSerialNumber:50735,
+        LensInfo:50736,
+        ChromaBlurRadius:50737,
+        AntiAliasStrength:50738,
+        ShadowScale:50739,
+        DNGPrivateData:50740,
+        MakerNoteSafety:50741,
+        CalibrationIlluminant1:50778,
+        CalibrationIlluminant2:50779,
+        BestQualityScale:50780,
+        RawDataUniqueID:50781,
+        OriginalRawFileName:50827,
+        OriginalRawFileData:50828,
+        ActiveArea:50829,
+        MaskedAreas:50830,
+        AsShotICCProfile:50831,
+        AsShotPreProfileMatrix:50832,
+        CurrentICCProfile:50833,
+        CurrentPreProfileMatrix:50834,
+        ColorimetricReference:50879,
+        CameraCalibrationSignature:50931,
+        ProfileCalibrationSignature:50932,
+        AsShotProfileName:50934,
+        NoiseReductionApplied:50935,
+        ProfileName:50936,
+        ProfileHueSatMapDims:50937,
+        ProfileHueSatMapData1:50938,
+        ProfileHueSatMapData2:50939,
+        ProfileToneCurve:50940,
+        ProfileEmbedPolicy:50941,
+        ProfileCopyright:50942,
+        ForwardMatrix1:50964,
+        ForwardMatrix2:50965,
+        PreviewApplicationName:50966,
+        PreviewApplicationVersion:50967,
+        PreviewSettingsName:50968,
+        PreviewSettingsDigest:50969,
+        PreviewColorSpace:50970,
+        PreviewDateTime:50971,
+        RawImageDigest:50972,
+        OriginalRawFileDigest:50973,
+        SubTileBlockSize:50974,
+        RowInterleaveFactor:50975,
+        ProfileLookTableDims:50981,
+        ProfileLookTableData:50982,
+        OpcodeList1:51008,
+        OpcodeList2:51009,
+        OpcodeList3:51022,
+        NoiseProfile:51041,
+    };
+
+    
+    that.ExifIFD = {
+        ExposureTime:33434,
+        FNumber:33437,
+        ExposureProgram:34850,
+        SpectralSensitivity:34852,
+        ISOSpeedRatings:34855,
+        OECF:34856,
+        SensitivityType:34864,
+        StandardOutputSensitivity:34865,
+        RecommendedExposureIndex:34866,
+        ISOSpeed:34867,
+        ISOSpeedLatitudeyyy:34868,
+        ISOSpeedLatitudezzz:34869,
+        ExifVersion:36864,
+        DateTimeOriginal:36867,
+        DateTimeDigitized:36868,
+        ComponentsConfiguration:37121,
+        CompressedBitsPerPixel:37122,
+        ShutterSpeedValue:37377,
+        ApertureValue:37378,
+        BrightnessValue:37379,
+        ExposureBiasValue:37380,
+        MaxApertureValue:37381,
+        SubjectDistance:37382,
+        MeteringMode:37383,
+        LightSource:37384,
+        Flash:37385,
+        FocalLength:37386,
+        SubjectArea:37396,
+        MakerNote:37500,
+        UserComment:37510,
+        SubSecTime:37520,
+        SubSecTimeOriginal:37521,
+        SubSecTimeDigitized:37522,
+        FlashpixVersion:40960,
+        ColorSpace:40961,
+        PixelXDimension:40962,
+        PixelYDimension:40963,
+        RelatedSoundFile:40964,
+        InteroperabilityTag:40965,
+        FlashEnergy:41483,
+        SpatialFrequencyResponse:41484,
+        FocalPlaneXResolution:41486,
+        FocalPlaneYResolution:41487,
+        FocalPlaneResolutionUnit:41488,
+        SubjectLocation:41492,
+        ExposureIndex:41493,
+        SensingMethod:41495,
+        FileSource:41728,
+        SceneType:41729,
+        CFAPattern:41730,
+        CustomRendered:41985,
+        ExposureMode:41986,
+        WhiteBalance:41987,
+        DigitalZoomRatio:41988,
+        FocalLengthIn35mmFilm:41989,
+        SceneCaptureType:41990,
+        GainControl:41991,
+        Contrast:41992,
+        Saturation:41993,
+        Sharpness:41994,
+        DeviceSettingDescription:41995,
+        SubjectDistanceRange:41996,
+        ImageUniqueID:42016,
+        CameraOwnerName:42032,
+        BodySerialNumber:42033,
+        LensSpecification:42034,
+        LensMake:42035,
+        LensModel:42036,
+        LensSerialNumber:42037,
+        Gamma:42240,
+    };
+
+
+    that.GPSIFD = {
+        GPSVersionID:0,
+        GPSLatitudeRef:1,
+        GPSLatitude:2,
+        GPSLongitudeRef:3,
+        GPSLongitude:4,
+        GPSAltitudeRef:5,
+        GPSAltitude:6,
+        GPSTimeStamp:7,
+        GPSSatellites:8,
+        GPSStatus:9,
+        GPSMeasureMode:10,
+        GPSDOP:11,
+        GPSSpeedRef:12,
+        GPSSpeed:13,
+        GPSTrackRef:14,
+        GPSTrack:15,
+        GPSImgDirectionRef:16,
+        GPSImgDirection:17,
+        GPSMapDatum:18,
+        GPSDestLatitudeRef:19,
+        GPSDestLatitude:20,
+        GPSDestLongitudeRef:21,
+        GPSDestLongitude:22,
+        GPSDestBearingRef:23,
+        GPSDestBearing:24,
+        GPSDestDistanceRef:25,
+        GPSDestDistance:26,
+        GPSProcessingMethod:27,
+        GPSAreaInformation:28,
+        GPSDateStamp:29,
+        GPSDifferential:30,
+        GPSHPositioningError:31,
+    };
+
+
+    that.InteropIFD = {
+        InteroperabilityIndex:1,
+    };
+
+    that.GPSHelper = {
+        degToDmsRational:function (degFloat) {
+            var degAbs = Math.abs(degFloat);
+            var minFloat = degAbs % 1 * 60;
+            var secFloat = minFloat % 1 * 60;
+            var deg = Math.floor(degAbs);
+            var min = Math.floor(minFloat);
+            var sec = Math.round(secFloat * 100);
+
+            return [[deg, 1], [min, 1], [sec, 100]];
+        },
+
+        dmsRationalToDeg:function (dmsArray, ref) {
+            var sign = (ref === 'S' || ref === 'W') ? -1.0 : 1.0;
+            var deg = dmsArray[0][0] / dmsArray[0][1] +
+                      dmsArray[1][0] / dmsArray[1][1] / 60.0 +
+                      dmsArray[2][0] / dmsArray[2][1] / 3600.0;
+
+            return deg * sign;
+        }
+    };
+    
+    
+    if (typeof exports !== 'undefined') {
+        if (typeof module !== 'undefined' && module.exports) {
+            exports = module.exports = that;
+        }
+        exports.piexif = that;
+    } else {
+        window.piexif = that;
+    }
+
+})();
+
+</script>
+
+<script id="core">
+// ---------- 순수 로직 (DOM 없음) ----------
+// cat: 작업 기준 데이터의 묶음(date/gear/rest/rights). cat이 없는 칸(GPS)은 사진마다만 고칠 수 있음
+const FIELDS = [
+  {k:'Make', g:'카메라 · 렌즈', cat:'gear', label:'제조사', ifd:'0th', tag:271, t:'text', ph:'예: SONY'},
+  {k:'Model', g:'카메라 · 렌즈', cat:'gear', label:'기종', ifd:'0th', tag:272, t:'text', ph:'예: ILCE-7M4'},
+  {k:'BodySerialNumber', g:'카메라 · 렌즈', cat:'gear', label:'바디 시리얼', ifd:'Exif', tag:42033, t:'text'},
+  {k:'LensMake', g:'카메라 · 렌즈', cat:'gear', label:'렌즈 제조사', ifd:'Exif', tag:42035, t:'text'},
+  {k:'LensModel', g:'카메라 · 렌즈', cat:'gear', label:'렌즈', ifd:'Exif', tag:42036, t:'text', ph:'예: FE 35mm F1.4 GM'},
+  {k:'LensSerialNumber', g:'카메라 · 렌즈', cat:'gear', label:'렌즈 시리얼', ifd:'Exif', tag:42037, t:'text'},
+  {k:'CameraOwnerName', g:'카메라 · 렌즈', cat:'gear', label:'카메라 소유자', ifd:'Exif', tag:42032, t:'text'},
+  {k:'Date', g:'날짜', cat:'date', label:'촬영 일시', t:'date'},
+  {k:'Artist', g:'저작권 · 설명', cat:'rights', label:'작가', ifd:'0th', tag:315, t:'text', ph:'이름'},
+  {k:'Copyright', g:'저작권 · 설명', cat:'rights', label:'저작권', ifd:'0th', tag:33432, t:'text', ph:'© 2026 이름. All rights reserved.'},
+  {k:'ImageDescription', g:'저작권 · 설명', cat:'rights', label:'설명', ifd:'0th', tag:270, t:'text'},
+  {k:'ExposureTime', g:'촬영 설정', cat:'rest', label:'셔터 속도 (초)', ifd:'Exif', tag:33434, t:'rational', ph:'1/250'},
+  {k:'FNumber', g:'촬영 설정', cat:'rest', label:'조리개 (F)', ifd:'Exif', tag:33437, t:'rational', ph:'2.8'},
+  {k:'ISO', g:'촬영 설정', cat:'rest', label:'ISO', ifd:'Exif', tag:34855, t:'int', ph:'100'},
+  {k:'FocalLength', g:'촬영 설정', cat:'rest', label:'초점 거리 (mm)', ifd:'Exif', tag:37386, t:'rational', ph:'35'},
+  {k:'Software', g:'촬영 설정', cat:'rest', label:'소프트웨어', ifd:'0th', tag:305, t:'text'},
+  {k:'GPSLat', g:'위치 (GPS)', label:'위도', t:'gps', ph:'37.5665 (비우면 GPS 삭제)'},
+  {k:'GPSLon', g:'위치 (GPS)', label:'경도', t:'gps', ph:'126.9780'},
+];
+const IFDS = ['0th','Exif','GPS','Interop','1st'];
+const POINTERS = {'0th':[34665,34853], 'Exif':[40965], '1st':[513,514]};
+
+function bin2u8(s){ const u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i)&255; return u; }
+function u82bin(u){ let s=''; for(let i=0;i<u.length;i+=8192) s+=String.fromCharCode.apply(null,u.subarray(i,i+8192)); return s; }
+function utf8enc(s){ return u82bin(new TextEncoder().encode(s)); }
+function utf8dec(s){ try{ return new TextDecoder('utf-8',{fatal:true}).decode(bin2u8(s)); }catch(e){ return s; } }
+function gcd(a,b){ while(b){ [a,b]=[b,a%b]; } return a||1; }
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+function emptyExif(){ return {'0th':{},'Exif':{},'GPS':{},'Interop':{},'1st':{},thumbnail:null}; }
+
+function startsWith(u8,p,str){ for(let i=0;i<str.length;i++) if(u8[p+i]!==str.charCodeAt(i)) return false; return true; }
+// HDR 게인맵 목록만 담은 XMP(편집 이력·기종·날짜 없음)는 지우면 HDR 표시만 깨지므로 남긴다
+const XMP_SAFE_NS=['adobe:ns:meta/','http://www.w3.org/1999/02/22-rdf-syntax-ns#','http://ns.google.com/photos/1.0/container/','http://ns.google.com/photos/1.0/container/item/','http://ns.adobe.com/hdr-gain-map/1.0/','http://ns.apple.com/HDRGainMap/1.0/','http://ns.apple.com/pixeldatainfo/1.0/'];
+function xmpIsGainMapOnly(u8,p,e){
+  if(!startsWith(u8,p,'http://ns.adobe.com/xap/1.0/\0')) return false;
+  const s=u82bin(u8.subarray(p+29,e));
+  const ns=[...s.matchAll(/xmlns:[\w.-]+\s*=\s*["']([^"']*)["']/g)].map(m=>m[1]);
+  return /hdr-gain-map|HDRGainMap/.test(s) && ns.length>0 && ns.every(u=>XMP_SAFE_NS.includes(u));
+}
+function segKind(u8,m,p,e){
+  if(m===0xE1){
+    if(startsWith(u8,p,'Exif\0\0')) return 'exif';
+    if(startsWith(u8,p,'http://ns.adobe.com/x')) return xmpIsGainMapOnly(u8,p,e)?'xmpsafe':'xmp';
+  }
+  if(m===0xE4) return 'app4';   // 제조사 전용 블록 (삼성 등)
+  if(m===0xED) return 'iptc';
+  if(m===0xFE) return 'com';
+  return 'other';
+}
+// SOI 이후 ~ 이미지 데이터(SOS) 전까지의 세그먼트 목록
+function scanJpeg(u8){
+  if(u8[0]!==0xFF||u8[1]!==0xD8) throw new Error('JPEG 파일이 아닙니다');
+  const segs=[]; let p=2;
+  while(p<u8.length-1){
+    if(u8[p]!==0xFF) throw new Error('JPEG 구조를 읽을 수 없습니다');
+    while(u8[p+1]===0xFF) p++;
+    const m=u8[p+1];
+    if(m===0xDA||m===0xD9) return {segs,tail:p};
+    if((m>=0xD0&&m<=0xD7)||m===0x01){ segs.push({m,s:p,e:p+2,kind:'other'}); p+=2; continue; }
+    const len=(u8[p+2]<<8)|u8[p+3], e=p+2+len;
+    if(len<2||e>u8.length) throw new Error('JPEG 헤더가 잘렸습니다');
+    segs.push({m,s:p,e,kind:segKind(u8,m,p+4,e)}); p=e;
+  }
+  throw new Error('JPEG 헤더가 잘렸습니다');
+}
+
+// 삼성 꼬리 데이터(SEF): 파일 맨 끝에 [데이터…][SEFH 목록][목록 길이]["SEFT"]. 시작 위치를 돌려줌(없으면 -1)
+function findTrailer(u8){
+  const n=u8.length; if(n<32||!startsWith(u8,n-4,'SEFT')) return -1;
+  const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+  const dirLen=dv.getUint32(n-8,true), dir=n-8-dirLen;
+  if(dir<0||!startsWith(u8,dir,'SEFH')) return -1;
+  const cnt=dv.getUint32(dir+8,true); let start=dir;
+  for(let i=0;i<cnt;i++){
+    const p=dir+12+i*12; if(p+12>n-8) return -1;
+    const off=dv.getUint32(p+4,true); if(off>dir) return -1;
+    start=Math.min(start,dir-off);
+  }
+  return start;
+}
+// 꼬리 데이터 안의 촬영 시각(UTC, 밀리초 13자리)을 바꿔 넣음
+function retimeTrailer(bin,ms){ return bin.replace(/(Image_UTC_Data)\d{13}/,(m,a)=>a+String(ms).padStart(13,'0')); }
+
+function readExif(u8){
+  const {segs}=scanJpeg(u8);
+  const info={xmp:segs.some(s=>s.kind==='xmp'), gainmap:segs.some(s=>s.kind==='xmpsafe'), iptc:segs.some(s=>s.kind==='iptc'), com:segs.some(s=>s.kind==='com'), app4:segs.some(s=>s.kind==='app4')};
+  const seg=segs.find(s=>s.kind==='exif');
+  let exif=emptyExif(), warn='';
+  if(seg){
+    try{ exif=Object.assign(emptyExif(), piexif.load(u82bin(u8.subarray(seg.s+4,seg.e)))); }
+    catch(e){ warn='기존 EXIF를 읽지 못했습니다. 저장하면 새 EXIF로 대체됩니다.'; }
+  }
+  return {exif,info,warn,segs};
+}
+// 기준 사진 전체 바이트 -> 기준 데이터 (EXIF + 제조사 블록 + 꼬리 데이터)
+function readRef(u8){
+  const r=readExif(u8), t=findTrailer(u8), trailer=t>=0?u82bin(u8.subarray(t)):null;
+  return {exif:r.exif, app4:r.segs.filter(s=>s.kind==='app4').map(s=>u82bin(u8.subarray(s.s,s.e))), trailer, tzMin:refTzMin(r.exif,trailer)};
+}
+// 기준 사진 자체에서 시간대를 알아냄: EXIF의 촬영 일시(현지 시각)와 꼬리 데이터의 시각(UTC)의 차이. 알 수 없으면 null
+function refTzMin(exif,trailer){
+  const m=String(exif.Exif[36867]||'').match(/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/), u=trailer&&trailer.match(/Image_UTC_Data(\d{13})/);
+  if(!m||!u) return null;
+  const tz=Math.round((Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6])-(+u[1]))/900000)*15;
+  return Math.abs(tz)<=14*60?tz:null;
+}
+
+function fmtRational(v,shutter){
+  if(!Array.isArray(v)||!v[1]) return '';
+  const [n,d]=v; const x=n/d;
+  if(shutter && x>0 && x<1) return '1/'+Math.round(d/n);
+  return String(+x.toFixed(2));
+}
+function parseRational(s){
+  s=String(s).trim().replace(/^f\/?/i,'').replace(/(mm|s|초)$/i,'').trim();
+  let x;
+  const m=s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+  if(m){ const a=+m[1], b=+m[2]; if(!b) return null; if(Number.isInteger(a)&&Number.isInteger(b)) return [a,b]; x=a/b; }
+  else { x=Number(s); }
+  if(!isFinite(x)||x<0) return null;
+  const n=Math.round(x*1000), g=gcd(n,1000);
+  return [n/g,1000/g];
+}
+function gpsToDec(v,ref){
+  if(!Array.isArray(v)||v.length<3) return '';
+  const x=v.map(r=>r&&r[1]?r[0]/r[1]:0);
+  let dec=x[0]+x[1]/60+x[2]/3600;
+  if(ref==='S'||ref==='W') dec=-dec;
+  return String(+dec.toFixed(6));
+}
+function decToGps(dec){
+  dec=Math.abs(dec);
+  let d=Math.floor(dec), mf=(dec-d)*60, m=Math.floor(mf), s=Math.round((mf-m)*60*10000);
+  if(s>=600000){ s=0; m++; } if(m>=60){ m=0; d++; }
+  return [[d,1],[m,1],[s,10000]];
+}
+function normDate(v){ v=String(v||''); return v.length===16 ? v+':00' : v; }
+function exifDateToInput(raw){
+  const m=typeof raw==='string' && raw.match(/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}` : '';
+}
+function shiftDate(v,ms){
+  const m=normDate(v).match(/^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)$/);
+  if(!m) return v;
+  const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6])+ms);
+  return d.toISOString().slice(0,19);
+}
+// 초의 십의 자리까지만 남김 (기준 시각은 초 앞자리까지만 정함): …:13 -> …:10
+function floorTens(v){ v=normDate(v); return /T\d\d:\d\d:\d\d$/.test(v)?v.slice(0,-1)+'0':v; }
+// 원래 촬영 시각이 없는 사진에 차례로 돌려 가며 넣는 초의 뒷자리
+const ONES_ROTATION=[3,8,0,4,7,5,1,8];
+// 초의 일의 자리: 그 사진의 원래 촬영 시각 것이 있으면 그것, 없으면 fallback(없으면 0)
+function withOnes(v,origDate,fallback){ v=floorTens(v); const o=normDate(origDate); return /T\d\d:\d\d:\d\d$/.test(v)?v.slice(0,-1)+(/T\d\d:\d\d:\d\d$/.test(o)?o.slice(-1):String(fallback||0)):v; }
+// 간격 "분:초" (예: 0:10, 1:30) 또는 초만(90). 빈 칸은 '', 잘못된 값은 null
+function parseGap(s){
+  s=String(s||'').trim(); if(!s) return '';
+  let m=s.match(/^(\d+):([0-5]?\d)$/); if(m) return +m[1]*60+ +m[2];
+  m=s.match(/^\d+$/); return m?+s:null;
+}
+// 장마다 첫 장 기준 몇 초 뒤인지. 간격 칸은 2~6번째 장에 차례로 쓰이고, 채운 칸까지를 한 묶음으로 되풀이
+function gapOffsets(gaps,count){
+  const g=gaps.map(parseGap).map(x=>typeof x==='number'?x:0);
+  let n=0; gaps.forEach((s,i)=>{ if(typeof parseGap(s)==='number') n=i+1; });
+  const out=[0]; let cum=0;
+  for(let i=1;i<count;i++){ cum+=n?g[(i-1)%n]:0; out.push(cum); }
+  return out;
+}
+
+// EXIF 객체 -> 폼 값(문자열)
+function readFields(ex){
+  const f={};
+  for(const d of FIELDS){
+    let v='';
+    if(d.t==='text'){ const r=ex[d.ifd][d.tag]; if(typeof r==='string') v=utf8dec(r).replace(/[\0\s]+$/,''); }
+    else if(d.t==='date') v=exifDateToInput(ex.Exif[36867])||exifDateToInput(ex.Exif[36868])||exifDateToInput(ex['0th'][306]);
+    else if(d.t==='rational') v=fmtRational(ex[d.ifd][d.tag], d.k==='ExposureTime');
+    else if(d.t==='int'){ const r=ex[d.ifd][d.tag]; const n=Array.isArray(r)?r[0]:r; v=(typeof n==='number')?String(n):''; }
+    else if(d.k==='GPSLat') v=gpsToDec(ex.GPS[2],ex.GPS[1]);
+    else if(d.k==='GPSLon') v=gpsToDec(ex.GPS[4],ex.GPS[3]);
+    f[d.k]=v;
+  }
+  return f;
+}
+
+// 바뀐 필드만 EXIF 객체에 반영
+function writeFields(ex,fields,orig){
+  const changed=k=>fields[k]!==orig[k];
+  for(const d of FIELDS){
+    if(!changed(d.k)) continue;
+    const v=String(fields[d.k]).trim();
+    if(d.t==='text'){ if(v) ex[d.ifd][d.tag]=utf8enc(v); else delete ex[d.ifd][d.tag]; }
+    else if(d.t==='date'){
+      const m=normDate(v).match(/^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)$/);
+      if(m){ const s=`${m[1]}:${m[2]}:${m[3]} ${m[4]}:${m[5]}:${m[6]}`; ex.Exif[36867]=s; ex.Exif[36868]=s; ex['0th'][306]=s; }
+      else { delete ex.Exif[36867]; delete ex.Exif[36868]; delete ex['0th'][306]; }
+      delete ex.GPS[7]; delete ex.GPS[29];   // UTC 기준 GPS 시각이 남아 어긋나지 않도록
+    }
+    else if(d.t==='rational'){ const r=v?parseRational(v):null; if(r) ex[d.ifd][d.tag]=r; else delete ex[d.ifd][d.tag]; }
+    else if(d.t==='int'){ const n=parseInt(v,10); if(n>=0&&n<=65535) ex[d.ifd][d.tag]=n; else delete ex[d.ifd][d.tag]; }
+  }
+  if(changed('GPSLat')||changed('GPSLon')){
+    const la=parseFloat(fields.GPSLat), lo=parseFloat(fields.GPSLon);
+    if(isFinite(la)&&isFinite(lo)&&Math.abs(la)<=90&&Math.abs(lo)<=180){
+      if(!ex.GPS[0]) ex.GPS[0]=[2,3,0,0];
+      ex.GPS[1]=la<0?'S':'N'; ex.GPS[2]=decToGps(la);
+      ex.GPS[3]=lo<0?'W':'E'; ex.GPS[4]=decToGps(lo);
+    } else ex.GPS={};
+  }
+}
+
+function tryDump(ex){ try{ return piexif.dump(ex); }catch(e){ return null; } }
+// EXIF 객체 -> "Exif\0\0..." 바이너리 문자열 (태그가 없으면 null)
+function dumpExif(ex){
+  const dropped=[];
+  for(const ifd of IFDS){
+    ex[ifd]=ex[ifd]||{};
+    for(const t of Object.keys(ex[ifd])) if(!piexif.TAGS[ifd][t]){ delete ex[ifd][t]; dropped.push(ifd+':'+t); }
+  }
+  const has=IFDS.some(i=>Object.keys(ex[i]).some(t=>!(POINTERS[i]||[]).includes(+t)));
+  if(!has) return {bin:null,dropped};
+  let bin=tryDump(ex);
+  if(bin===null && ex.thumbnail){ const th=ex.thumbnail; ex.thumbnail=null; const keep1=ex['1st']; ex['1st']={};
+    bin=tryDump(ex); if(bin===null){ ex.thumbnail=th; ex['1st']=keep1; } else dropped.push('thumbnail'); }
+  if(bin===null){
+    // 형식이 어긋난 태그를 하나씩 찾아 제외
+    for(const ifd of IFDS) for(const t of Object.keys(ex[ifd])){
+      if((POINTERS[ifd]||[]).includes(+t)) continue;
+      const probe=emptyExif(); probe[ifd][t]=ex[ifd][t];
+      if(tryDump(probe)===null){ delete ex[ifd][t]; dropped.push(ifd+':'+t); }
+    }
+    bin=piexif.dump(ex);
+  }
+  if(bin.length>65533 && ex.thumbnail){ ex.thumbnail=null; ex['1st']={}; dropped.push('thumbnail'); bin=piexif.dump(ex); }
+  if(bin.length>65533) throw new Error('EXIF 데이터가 너무 큽니다');
+  return {bin,dropped};
+}
+
+// 원본 JPEG 바이트에 새 EXIF를 끼워 넣음. 이미지 데이터는 그대로 복사(재압축 없음)
+// tail이 있으면 꼬리 데이터를 기준 것으로 바꾸고(기준에 없으면 제거), 제조사 블록(APP4)은 제거
+// pix(서명을 넣어 다시 압축한 JPEG)가 있으면 이미지 데이터는 pix 것을 쓰고, 원본에서는 메타데이터 블록만 가져옴.
+// 이때 HDR 게인맵(XMP 목록·MPF·ISO 블록과 뒤에 붙은 게인맵 이미지)은 새 픽셀과 맞지 않으므로 뺌
+function buildJpeg(u8,exifBin,clean,tail,pix){
+  const {segs,tail:sos}=scanJpeg(u8);
+  const isMeta=s=>(s.m>=0xE0&&s.m<=0xEF)||s.m===0xFE;
+  const isHdr=s=>s.kind==='xmpsafe'||(s.m===0xE2&&(startsWith(u8,s.s+4,'MPF\0')||startsWith(u8,s.s+4,'urn:iso:std:iso:ts:21496')));
+  const keep=segs.filter(s=>s.kind!=='exif' && !(s.kind==='xmp'&&clean.xmp) && !(s.kind==='iptc'&&clean.iptc) && !(s.kind==='com'&&clean.com) && !(s.kind==='app4'&&tail)
+    && !(pix&&(!isMeta(s)||isHdr(s))));
+  const parts=[u8.subarray(0,2)];
+  let i=0;
+  while(i<keep.length && keep[i].m===0xE0){ parts.push(u8.subarray(keep[i].s,keep[i].e)); i++; }
+  if(exifBin){
+    const len=exifBin.length+2;
+    parts.push(new Uint8Array([0xFF,0xE1,len>>8,len&255]), bin2u8(exifBin));
+  }
+  if(tail) for(const a of tail.app4) parts.push(bin2u8(a));
+  for(;i<keep.length;i++) parts.push(u8.subarray(keep[i].s,keep[i].e));
+  if(pix){
+    const ps=scanJpeg(pix);
+    for(const s of ps.segs) if(!isMeta(s)) parts.push(pix.subarray(s.s,s.e));
+    parts.push(pix.subarray(ps.tail));
+    if(!tail){ const t=findTrailer(u8); if(t>=sos) parts.push(u8.subarray(t)); }   // 기준을 따르지 않는 사진의 꼬리 데이터는 그대로 둠
+  } else {
+    let end=u8.length;
+    if(tail){ const t=findTrailer(u8); if(t>=sos) end=t; }
+    parts.push(u8.subarray(sos,end));
+  }
+  if(tail&&tail.trailer) parts.push(bin2u8(tail.trailer));
+  let n=0; for(const p of parts) n+=p.length;
+  const out=new Uint8Array(n); let o=0;
+  for(const p of parts){ out.set(p,o); o+=p.length; }
+  return out;
+}
+
+// 서명 이미지(RGBA 픽셀) -> 서명만 남긴 투명도 마스크. 배경이 이미 투명하면 그 투명도를 쓰고,
+// 아니면 가장자리 밝기를 배경으로 보고 배경과 다른 정도(잉크)를 투명도로 바꾼 뒤 서명 둘레만 잘라냄
+function extractMask(d,w,h){
+  const n=w*h, a=new Uint8ClampedArray(n);
+  let transp=0; for(let i=0;i<n;i++) if(d[i*4+3]<250) transp++;
+  if(transp>n*0.05){ for(let i=0;i<n;i++) a[i]=d[i*4+3]; }
+  else{
+    const lum=new Uint8Array(n); for(let i=0;i<n;i++) lum[i]=(d[i*4]*77+d[i*4+1]*150+d[i*4+2]*29)>>8;
+    const border=[]; for(let x=0;x<w;x++){ border.push(lum[x],lum[(h-1)*w+x]); } for(let y=0;y<h;y++){ border.push(lum[y*w],lum[y*w+w-1]); }
+    border.sort((p,q)=>p-q); const bg=border[border.length>>1];
+    const hist=new Uint32Array(256); for(let i=0;i<n;i++) hist[Math.abs(lum[i]-bg)]++;
+    let cnt=0, maxD=0; for(let v=255;v>=0;v--){ cnt+=hist[v]; if(cnt>=n*0.003){ maxD=v; break; } }
+    if(maxD<30) throw new Error('서명을 찾지 못했습니다. 배경과 뚜렷이 구분되는 서명 이미지를 넣어 주세요');
+    const lo=maxD*0.25, hi=maxD*0.6;
+    for(let i=0;i<n;i++) a[i]=Math.max(0,Math.min(1,(Math.abs(lum[i]-bg)-lo)/(hi-lo)))*255;
+  }
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(a[y*w+x]>24){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  if(x1<0) throw new Error('서명을 찾지 못했습니다');
+  const cw=x1-x0+1, ch=y1-y0+1, out=new Uint8ClampedArray(cw*ch);
+  for(let y=0;y<ch;y++) out.set(a.subarray((y0+y)*w+x0,(y0+y)*w+x0+cw),y*cw);
+  return {w:cw,h:ch,alpha:out};
+}
+
+// ---- 기준 사진에 맞추기 ----
+// 묶음별 태그. 여기에 없고 SKIP에도 없는 0th/Exif 태그는 모두 'rest'(촬영 설정·색 공간 등)
+const REF_CATS={
+  // 42016(ImageUniqueID)은 이름과 달리 같은 기기의 사진끼리 값이 같아(카메라 모듈 고정 값) 장비로 취급
+  gear:{'0th':[271,272],Exif:[42016,42032,42033,42034,42035,42036,42037]},
+  date:{'0th':[306],Exif:[36867,36868,37520,37521,37522,36880,36881,36882]},
+  rights:{'0th':[315,33432,270]},
+};
+// 사진마다 달라야 하는 것(크기·방향·썸네일·MakerNote)은 복사하지 않음. GPS는 IFD째로 건드리지 않음
+const REF_SKIP={'0th':[256,257,258,259,262,273,274,277,278,279,282,283,284,296,513,514,531,34665,34853],Exif:[40962,40963,40965,37500]};
+function refCat(ifd,t){
+  t=+t; if((REF_SKIP[ifd]||[]).includes(t)) return null;
+  for(const c in REF_CATS) if((REF_CATS[c][ifd]||[]).includes(t)) return c;
+  return 'rest';
+}
+function applyReference(exif,ref,cats){
+  const ex=clone(exif);
+  for(const ifd of ['0th','Exif']){
+    for(const t of Object.keys(ex[ifd])){ const c=refCat(ifd,t); if(c&&cats[c]) delete ex[ifd][t]; }
+    for(const t of Object.keys(ref[ifd]||{})){ const c=refCat(ifd,t); if(c&&cats[c]) ex[ifd][t]=clone(ref[ifd][t]); }
+  }
+  if(cats.gear) delete ex.Exif[37500];              // 다른 기종의 MakerNote가 남지 않도록
+  if(cats.rest) ex.Interop=clone(ref.Interop||{});  // 색 공간과 짝을 이루는 정보
+  if(cats.date){ delete ex.GPS[7]; delete ex.GPS[29]; }
+  return ex;
+}
+// 프리셋에 담을 EXIF: 썸네일·GPS·MakerNote·사진 고유 값은 뺌
+function presetExif(exif){
+  const ex=clone(exif); ex.thumbnail=null; ex['1st']={}; ex.GPS={};
+  for(const ifd of ['0th','Exif']) for(const t of Object.keys(ex[ifd])) if(refCat(ifd,t)===null) delete ex[ifd][t];
+  return ex;
+}
+
+// 작업 기준 데이터(base)를 사진 한 장에 적용. offsetSec: 첫 장 기준 몇 초 뒤인지
+//  - 기준 사진이 있으면: 체크한 묶음을 기준과 똑같이 맞춤(기준 데이터에서 비운 칸은 지움)
+//  - 기준 사진이 없으면: 값을 입력한 칸만 넣음(저작권만 넣기 등)
+//  - 사진에서 직접 고친 칸(item.manual)은 건드리지 않음
+function applyBase(item,base,offsetSec,onesFallback){
+  const ref=base.ref, c=base.cats;
+  if(ref){
+    item.exif=applyReference(item.exif0,ref.exif,{gear:c.gear,rest:c.rest,rights:c.rights,date:false});
+    if(c.date){
+      // 1초 미만 자리는 그 사진의 원래 값을 따르고, 없으면 0
+      for(const t of [37520,37521,37522]) if(!(t in item.exif.Exif)&&typeof ref.exif.Exif[t]==='string') item.exif.Exif[t]='0'.repeat(ref.exif.Exif[t].length||1);
+      for(const t of [36880,36881,36882]){ if(t in ref.exif.Exif) item.exif.Exif[t]=ref.exif.Exif[t]; else delete item.exif.Exif[t]; }   // 시간대는 기준을 따름
+    }
+    // 제조사 블록(APP4)은 기준 사진의 고유 ID가 들어 있어 복사하지 않고, 대상의 것도 제거한다
+    item.tail=c.tail?{app4:[],trailer:ref.trailer||null,tzMin:ref.tzMin}:null;
+  } else { item.exif=item.exif0; item.tail=null; }
+  const b=readFields(item.exif);
+  for(const d of FIELDS){
+    if(item.manual.has(d.k)) continue;
+    let v=b[d.k];
+    if(d.cat&&c[d.cat]){
+      const bv=d.k==='Date'?(base.fields.Date?withOnes(shiftDate(floorTens(base.fields.Date),offsetSec*1000),item.orig0.Date,onesFallback):''):String(base.fields[d.k]||'').trim();
+      if(d.k==='Date'||!ref){ if(bv) v=bv; } else v=bv;
+    }
+    if(base.gpsClear&&d.t==='gps') v='';
+    item.fields[d.k]=v;
+  }
+  item.orig=b; item.applied=ref?ref.name:'직접 입력한 기준'; item.softFromRef=!!(ref&&c.rest);
+}
+
+// 기종을 바꿨는데 예전 기종의 흔적이 다른 칸에 남은 경우를 찾아 알려 줌
+function mismatches(item,clean){
+  const f=item.fields, o=item.orig0, w=[];
+  const has=(a,b)=>!!a&&!!b&&a.toLowerCase().includes(b.toLowerCase());
+  const modelCh=!!o.Model&&f.Model!==o.Model, makeCh=!!o.Make&&f.Make!==o.Make;
+  if(modelCh&&has(f.LensModel,o.Model)) w.push(`렌즈 이름에 예전 기종명(${o.Model})이 남아 있습니다`);
+  if(makeCh&&(has(f.LensModel,o.Make)||has(f.LensMake,o.Make))) w.push(`렌즈 정보에 예전 제조사명(${o.Make})이 남아 있습니다`);
+  if(modelCh||makeCh){
+    const softKept=f.Software&&f.Software===o.Software&&!(clean.software&&f.Software===item.orig.Software);
+    if(softKept) w.push(`소프트웨어 값(${f.Software})이 예전 기기의 것 그대로입니다`);
+    if(f.BodySerialNumber&&f.BodySerialNumber===o.BodySerialNumber) w.push('바디 시리얼이 예전 기기의 것 그대로입니다');
+    if(item.exif.Exif[37500]&&!clean.makernote&&!item.deleted.has('Exif:37500')) w.push('MakerNote(예전 기기의 제조사 데이터)가 남습니다. 출력 설정에서 MakerNote 제거를 켜세요');
+    if(!item.tail&&(item.info.tail||item.info.app4)) w.push('예전 기기의 제조사 블록·꼬리 데이터가 그대로 남습니다');
+  }
+  if(!item.tail&&item.info.tail&&f.Date!==o.Date) w.push('꼬리 데이터에 원래 촬영 시각이 남습니다 (기준 사진을 적용하면 함께 바뀝니다)');
+  return w;
+}
+
+// 편집 상태가 반영된 EXIF 객체
+function effectiveExif(item,clean){
+  const ex=clone(item.exif);
+  for(const key of item.deleted){ const [ifd,t]=key.split(':'); delete ex[ifd][t]; }
+  // 기준 사진에서 온 소프트웨어 값은 지우지 않음(손대지 않은 원래 값만 정리)
+  if(clean.software&&!item.softFromRef){ delete ex['0th'][305]; delete ex['0th'][11]; delete ex['0th'][316]; }
+  if(clean.makernote){ delete ex.Exif[37500]; }
+  writeFields(ex,item.fields,item.orig);
+  return ex;
+}
+// 최종 EXIF의 촬영 일시 -> UTC 밀리초. 꼬리 데이터의 시각이 촬영 일시와 정확히 같은 순간을 가리키게 함
+// 시간대: 기준 사진에서 알아낸 값(tzMin) > EXIF 시간대 태그 > 이 컴퓨터의 시간대
+function exifUtcMs(ex,tzMin){
+  const m=String(ex.Exif[36867]||'').match(/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/); if(!m) return null;
+  const o=String(ex.Exif[36881]||ex.Exif[36880]||'').match(/^([+-])(\d\d):(\d\d)/);
+  const tz=typeof tzMin==='number'?tzMin:o?(o[1]==='-'?-1:1)*(+o[2]*60+ +o[3]):null;
+  const ms=tz!==null? Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6])-tz*60000
+            : new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]).getTime();
+  const sub=String(ex.Exif[37521]||'').replace(/\D/g,'');
+  return ms+(sub?parseInt((sub+'00').slice(0,3),10):0);
+}
+// 한 장 처리: 원본 바이트 + 편집 상태 -> 결과 바이트
+// size: 크기를 바꾼 경우의 실제 픽셀 크기. 이미 있는 크기 태그만 사실대로 고침(없던 태그를 새로 만들지 않음)
+function processImage(u8,item,clean,pix,size){
+  const ex=effectiveExif(item,clean);
+  if(size){
+    if(40962 in ex.Exif) ex.Exif[40962]=size.w; if(40963 in ex.Exif) ex.Exif[40963]=size.h;
+    if(256 in ex['0th']) ex['0th'][256]=size.w; if(257 in ex['0th']) ex['0th'][257]=size.h;
+  }
+  let tail;
+  if(item.tail){
+    const ms=exifUtcMs(ex,item.tail.tzMin);   // 촬영 일시가 없으면 기준 시각이 남지 않도록 꼬리 데이터를 붙이지 않음
+    tail={app4:item.tail.app4||[], trailer:item.tail.trailer&&ms!=null?retimeTrailer(item.tail.trailer,ms):null};
+  }
+  const {bin,dropped}=dumpExif(ex);
+  return {out:buildJpeg(u8,bin,clean,tail,pix),dropped};
+}
+
+const CRC=(()=>{ const t=new Uint32Array(256); for(let i=0;i<256;i++){ let c=i; for(let j=0;j<8;j++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[i]=c>>>0; } return t; })();
+function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c=CRC[(c^u8[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+// 무압축 ZIP (JPEG은 이미 압축돼 있어 무압축으로 충분)
+function zipParts(files){
+  const enc=new TextEncoder(), parts=[], central=[]; let off=0;
+  for(const f of files){
+    // 파일별 수정 시각: 압축을 풀면 이 시각이 파일의 수정 시각이 됨
+    let d=f.mtime instanceof Date&&!isNaN(f.mtime)?f.mtime:new Date();
+    if(d.getFullYear()<1980) d=new Date(1980,0,1);
+    const time=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), date=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+    const xt=new DataView(new ArrayBuffer(9));   // 초 단위까지 정확한 확장 타임스탬프
+    xt.setUint16(0,0x5455,true); xt.setUint16(2,5,true); xt.setUint8(4,1); xt.setUint32(5,Math.floor(d.getTime()/1000),true);
+    const extra=new Uint8Array(xt.buffer);
+    const n=enc.encode(f.name), crc=crc32(f.data), sz=f.data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true);
+    lh.setUint16(10,time,true); lh.setUint16(12,date,true); lh.setUint32(14,crc,true);
+    lh.setUint32(18,sz,true); lh.setUint32(22,sz,true); lh.setUint16(26,n.length,true); lh.setUint16(28,extra.length,true);
+    parts.push(new Uint8Array(lh.buffer),n,extra,f.data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true);
+    ch.setUint16(12,time,true); ch.setUint16(14,date,true); ch.setUint32(16,crc,true);
+    ch.setUint32(20,sz,true); ch.setUint32(24,sz,true); ch.setUint16(28,n.length,true); ch.setUint16(30,extra.length,true); ch.setUint32(42,off,true);
+    central.push(new Uint8Array(ch.buffer),n,extra);
+    off+=30+n.length+extra.length+sz;
+  }
+  let csz=0; for(const c of central) csz+=c.length;
+  const end=new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true);
+  end.setUint32(12,csz,true); end.setUint32(16,off,true);
+  return [...parts,...central,new Uint8Array(end.buffer)];
+}
+</script>
+
+<script>
+// ---------- 화면 ----------
+const $=id=>document.getElementById(id);
+const h=(tag,props={},...kids)=>{ const e=document.createElement(tag); for(const [k,v] of Object.entries(props)){ if(k==='class') e.className=v; else if(k.startsWith('on')) e.addEventListener(k.slice(2),v); else if(v!==false&&v!=null) e[k]=v; } for(const c of kids.flat()) if(c!=null&&c!==false) e.append(c); return e; };
+
+const BASE_KEYS=FIELDS.filter(d=>d.cat).map(d=>d.k);
+const newBase=()=>({ref:null,preset:null,fields:Object.fromEntries(BASE_KEYS.map(k=>[k,''])),cats:{date:true,gear:true,rest:true,rights:true,tail:true},gaps:['','','','',''],gpsClear:false,ones:null});   // ones: 기준 사진의 촬영 시각이 원래 갖고 있던 초의 뒷자리
+const state={ items:[], cur:null, nextId:1, base:newBase(), presets:[], step:1, shotOpen:null,
+  sig:{mask:null,on:false,level:0,pos:'right',size:18},
+  out:{size:'orig',custom:2048},   // 출력 크기: 'orig' 또는 긴 변 px, 'custom'이면 custom 값
+  clean:{software:true,makernote:true,xmp:true,iptc:true,com:true,mtime:true} };
+try{ const s=JSON.parse(localStorage.getItem('exif-editor')||'null'); if(s){ Object.assign(state.clean,s.clean||{}); Object.assign(state.out,s.out||{}); } }catch(e){}
+const outLongEdge=()=>{ const o=state.out; if(o.size==='orig') return 0; const n=o.size==='custom'?+o.custom:+o.size; return n>=16&&n<=12000?Math.round(n):0; };
+try{ const p=JSON.parse(localStorage.getItem('exif-editor-presets2')||'[]'); if(Array.isArray(p)) state.presets=p; }catch(e){}
+const save=()=>{ try{ localStorage.setItem('exif-editor',JSON.stringify({clean:state.clean,out:state.out})); }catch(e){} };
+try{ const s=JSON.parse(localStorage.getItem('exif-editor-sig')||'null'); if(s){ Object.assign(state.sig,{on:!!s.on,level:s.level,pos:s.pos,size:s.size}); if(s.mask) state.sig.mask={w:s.mask.w,h:s.mask.h,id:1,alpha:new Uint8ClampedArray(bin2u8(atob(s.mask.data)))}; } }catch(e){}
+function saveSig(){ const s=state.sig; try{ localStorage.setItem('exif-editor-sig',JSON.stringify({on:s.on,level:s.level,pos:s.pos,size:s.size,mask:s.mask&&{w:s.mask.w,h:s.mask.h,data:btoa(u82bin(s.mask.alpha))}})); }catch(e){} }
+const savePresets=()=>{ try{ localStorage.setItem('exif-editor-presets2',JSON.stringify(state.presets)); return true; }catch(e){ return false; } };
+
+// 안드로이드 앱 안에서 돌 때: ZIP 대신 갤러리(Pictures/EXIF Editor)에 바로 저장
+const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
+async function saveNative(name,data,taken,setTime){
+  const {id}=await Capacitor.nativePromise('PhotoSaver','begin',{});
+  for(let o=0;o<data.length;o+=393216) await Capacitor.nativePromise('PhotoSaver','append',{id,data:btoa(u82bin(data.subarray(o,o+393216)))});
+  return Capacitor.nativePromise('PhotoSaver','finish',{id,name,takenMs:taken?taken.getTime():null,setTime:!!setTime});
+}
+let toastT; const toast=msg=>{ $('toast').textContent=msg; $('toast').classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>$('toast').classList.remove('on'),3500); };
+const curItem=()=>state.items.find(i=>i.id===state.cur)||null;
+const isDirty=it=>it.deleted.size>0||!!it.applied||FIELDS.some(d=>it.fields[d.k]!==it.orig0[d.k]);
+const checked=()=>state.items.filter(i=>i.checked);
+const fmtSize=n=>n>1048576?(n/1048576).toFixed(1)+' MB':Math.round(n/1024)+' KB';
+const isJpeg=f=>/\.jpe?g$/i.test(f.name)||f.type==='image/jpeg';
+function fieldDate(v){
+  const m=normDate(v).match(/^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)$/);
+  return m?new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]):null;
+}
+
+// ② 변경 대상
+async function addFiles(files){
+  let skipped=0;
+  for(const file of files){
+    if(!isJpeg(file)){ skipped++; continue; }
+    try{
+      let r;
+      try{ r=readExif(new Uint8Array(await file.slice(0,1<<20).arrayBuffer())); }
+      catch(e){ r=readExif(new Uint8Array(await file.arrayBuffer())); }
+      r.info.tail=findTrailer(new Uint8Array(await file.slice(Math.max(0,file.size-(1<<18))).arrayBuffer()))>=0;
+      r.info.hasExif=IFDS.some(i=>Object.keys(r.exif[i]).length>0);
+      const fields=readFields(r.exif);
+      // exif0/orig0: 파일 그대로의 값, exif/orig: 기준을 적용한 뒤의 바탕 값
+      const it={id:state.nextId++,file,name:file.name,exif:r.exif,exif0:r.exif,info:r.info,warn:r.warn,fields,orig:{...fields},orig0:{...fields},
+        applied:null,tail:null,manual:new Set(),deleted:new Set(),checked:true,url:null};
+      it.thumb=r.exif.thumbnail?'data:image/jpeg;base64,'+btoa(r.exif.thumbnail):null;
+      state.items.push(it);
+    }catch(e){ skipped++; }
+  }
+  if(skipped) toast(`${skipped}개 파일은 JPEG가 아니거나 읽을 수 없어 건너뛰었습니다`);
+  if(state.cur==null&&state.items.length) state.cur=state.items[0].id;
+  renderList(); renderEditor();
+}
+const urlOf=it=>it.url||(it.url=URL.createObjectURL(it.file));
+
+function rowSub(it){
+  const f=it.fields;
+  return [f.Model||(it.info.hasExif||it.applied?'기종 없음':'EXIF 없음'), f.Date?f.Date.slice(2).replace('T',' '):'날짜 없음',
+    (f.GPSLat&&f.GPSLon)&&'GPS', it.tail?(it.tail.trailer?'꼬리→기준':null):(it.info.tail&&'꼬리')].filter(Boolean).join(' · ');
+}
+function updateCounts(){
+  const sel=checked(), n=sel.length, t=state.items.length;
+  $('count').textContent=t?`${n} / ${t}장`:'';
+  $('checkAll').checked=t>0&&n===t;
+  const ab=$('applyBtn'); if(ab){ ab.disabled=n===0; ab.textContent=n?`선택한 ${n}장에 적용`:'적용할 사진을 선택하세요'; }
+  const eb=$('exportBtn'); if(eb){ eb.disabled=n===0; eb.textContent=NATIVE?(n?`갤러리에 저장 (${n}장)`:'갤러리에 저장'):n>1||(n&&state.clean.mtime)?`내보내기 (${n}장 ZIP)`:'내보내기'; }
+  const sm=$('summary'); if(sm){
+    const mis=sel.filter(it=>mismatches(it,state.clean).length).length, nod=sel.filter(it=>!it.fields.Date).length, raw=sel.filter(it=>!isDirty(it)).length;
+    sm.textContent=n?[`${n}장 저장 예정`, state.sig.on&&state.sig.mask&&'서명 넣음(다시 압축)', outLongEdge()&&`긴 변 ${outLongEdge()}px로 크기 변경(다시 압축)`, mis&&`경고 ${mis}장`, nod&&`날짜 없음 ${nod}장`, raw&&`손대지 않은 사진 ${raw}장`].filter(Boolean).join(' · '):'선택한 사진이 없습니다';
+    sm.style.color=mis?'var(--danger)':'';
+  }
+}
+function renderList(){
+  const list=$('list'); list.innerHTML='';
+  if(!state.items.length) list.append(h('div',{class:'drop',style:'margin:16px;padding:28px 12px'},h('strong',{},'바꿀 사진을 여기에'),'JPEG 여러 장을 끌어다 놓으세요'));
+  for(const it of state.items){
+    const row=h('div',{class:'row'+(it.id===state.cur?' cur':''),id:'row'+it.id,onclick:()=>{ state.cur=it.id; renderList(); renderEditor(); if(isPhone()) setStep(3); }},
+      h('input',{type:'checkbox',checked:it.checked,onclick:e=>{ e.stopPropagation(); it.checked=e.target.checked; updateCounts(); }}),
+      h('img',{src:it.thumb||urlOf(it),loading:'lazy',alt:''}),
+      h('div',{class:'tx'},h('div',{class:'nm',title:it.name},it.name),h('div',{class:'sub'})),
+      h('span',{class:'bang',title:'어긋나는 값이 있습니다'},'!'),
+      h('span',{class:'dot',title:'수정됨'}));
+    list.append(row); markRow(it,true);
+  }
+  updateCounts();
+}
+function markRow(it,quiet){
+  const w=mismatches(it,state.clean);
+  const r=$('row'+it.id);
+  if(r){ r.classList.toggle('dirty',isDirty(it)); r.classList.toggle('mis',w.length>0); r.querySelector('.sub').textContent=rowSub(it); }
+  const box=$('mis'); if(box&&it.id===state.cur){ box.innerHTML=''; for(const m of w) box.append(h('div',{},'⚠ '+m)); }
+  if(!quiet) updateCounts();
+}
+
+function fieldInput(d,value,oninput){
+  const inp=h('input',{type:d.t==='date'?'datetime-local':'text',value,placeholder:d.ph||'',oninput:e=>oninput(d.t==='date'?normDate(e.target.value):e.target.value,e.target)});
+  if(d.t==='date') inp.step=1;
+  return inp;
+}
+function tagText(v){
+  if(typeof v==='string'){ const s=utf8dec(v).replace(/\0+$/,''); return /[\x00-\x08\x0e-\x1f]/.test(s)||s.length>300?`(바이너리 ${v.length}바이트)`:s; }
+  const s=JSON.stringify(v); return s.length>120?s.slice(0,120)+'…':s;
+}
+
+// 한 장씩 수정
+function renderEditor(){
+  const ed=$('editor'); ed.innerHTML='';
+  const it=curItem();
+  if(!it){
+    ed.append(h('div',{class:'drop'},h('strong',{},'한 장씩 수정'),'② 목록에서 사진을 고르면 그 사진만 따로 고칠 수 있습니다. 여기서 직접 고친 칸은 기준을 다시 적용해도 유지됩니다.'));
+    drawSigPreview(); return;
+  }
+  const extra=[it.info.xmp&&'XMP',it.info.gainmap&&'HDR 게인맵 XMP(유지)',it.info.iptc&&'IPTC',it.info.com&&'주석',it.info.app4&&'제조사 블록',it.info.tail&&'꼬리 데이터'].filter(Boolean).join(', ');
+  ed.append(h('div',{class:'top'},
+    h('img',{src:urlOf(it),alt:''}),
+    h('div',{},
+      h('h2',{},it.name),
+      h('div',{class:'meta'},fmtSize(it.file.size)+(extra?` · EXIF 밖 데이터: ${extra}`:'')),
+      it.applied&&h('div',{class:'meta'},`적용된 기준: ${it.applied}`+(it.tail?(it.tail.trailer?' · 꼬리 데이터는 기준 것으로 교체, 제조사 블록은 제거':' · 꼬리 데이터·제조사 블록 제거'):'')),
+      it.warn&&h('div',{class:'warn'},it.warn),
+      h('div',{id:'mis'}),
+      h('div',{class:'btns',style:'margin-top:10px'},
+        h('button',{onclick:()=>exportItems([it])},'이 사진만 저장'),
+        h('button',{onclick:()=>loadRef(it.file)},'이 사진을 기준으로'),
+        h('button',{onclick:()=>{ it.exif=it.exif0; it.orig={...it.orig0}; it.fields={...it.orig0}; it.applied=null; it.tail=null; it.softFromRef=false; it.manual.clear(); it.deleted.clear(); renderEditor(); markRow(it); }},'원본 값으로 되돌리기')))));
+  for(const g of [...new Set(FIELDS.map(d=>d.g))]){
+    ed.append(h('fieldset',{},h('legend',{},g),h('div',{class:'grid'},
+      FIELDS.filter(d=>d.g===g).map(d=>{
+        const inp=fieldInput(d,it.fields[d.k],(v,el)=>{ it.fields[d.k]=v; it.manual.add(d.k); el.classList.toggle('changed',v!==it.orig0[d.k]); markRow(it); });
+        inp.classList.toggle('changed',it.fields[d.k]!==it.orig0[d.k]);
+        return h('label',{class:'f'},d.label,inp);
+      }))));
+  }
+  const rows=[];
+  for(const ifd of IFDS) for(const t of Object.keys(it.exif[ifd]||{})){
+    if((POINTERS[ifd]||[]).includes(+t)) continue;
+    const key=ifd+':'+t, info=piexif.TAGS[ifd][t];
+    const tr=h('tr',{class:it.deleted.has(key)?'del':''},
+      h('td',{},`${ifd} · ${info?info.name:t}`), h('td',{},tagText(it.exif[ifd][t])),
+      h('td',{},h('button',{class:'link',onclick:()=>{ it.deleted.has(key)?it.deleted.delete(key):it.deleted.add(key); tr.className=it.deleted.has(key)?'del':''; tr.lastChild.firstChild.textContent=it.deleted.has(key)?'복구':'삭제'; markRow(it); }},it.deleted.has(key)?'복구':'삭제')));
+    rows.push(tr);
+  }
+  drawSigPreview();
+  ed.append(h('details',{},h('summary',{},`이 사진의 EXIF 태그 전체 (${rows.length})`),
+    rows.length?h('table',{},rows):h('p',{class:'hint'},'EXIF 태그가 없습니다.')));
+  markRow(it,true);
+}
+
+// ① 작업 기준 · ③ 작업 · ④ 출력
+const CAT_INFO={
+  date:['촬영 일시','기준 시각을 첫 장에 넣고, 다음 장부터는 아래 간격만큼 뒤로 넣습니다'],
+  gear:['촬영 장비','기기 고유 ID(ImageUniqueID)와 렌즈 사양 태그도 기준 사진 그대로 따라갑니다'],
+  rest:['촬영 설정 · 소프트웨어','여기 없는 나머지 태그(색 공간, 화이트밸런스, 측광 등)도 기준 사진 그대로 따라갑니다'],
+  rights:['저작권 · 설명',''],
+};
+function catFieldset(cat){
+  const b=state.base, [title,desc]=CAT_INFO[cat];
+  const fs=h('fieldset',{class:b.cats[cat]?'':'off'});
+  fs.append(h('legend',{},h('label',{},h('input',{type:'checkbox',checked:b.cats[cat],onchange:e=>{ b.cats[cat]=e.target.checked; fs.classList.toggle('off',!e.target.checked); }}),title)));
+  const body=h('div',{class:'body'});
+  for(const d of FIELDS.filter(x=>x.cat===cat)){
+    // 기준 시각: 초의 앞자리(10초 단위)만 바꿀 수 있고, 뒷자리는 원래 데이터의 것을 그대로 둠
+    const inp=fieldInput(d,b.fields[d.k],v=>{ b.fields[d.k]=d.k==='Date'?withOnes(v,'',b.ones):v; });
+    if(d.k==='Date'){ inp.step=10; inp.min='1970-01-01T00:00:0'+(b.ones||0); inp.onchange=()=>{ inp.value=b.fields.Date; }; }
+    body.append(h('label',{class:'brow'},h('span',{},d.k==='Date'?'기준 시각':d.label),inp));
+  }
+  if(cat==='date'){
+    body.append(h('div',{class:'meta',style:'margin-top:8px'},'장마다 앞 장보다 얼마 뒤인지 (분:초)'),
+      h('div',{class:'gaps'},b.gaps.map((g,i)=>h('label',{},`${i+2}번째`,h('input',{type:'text',value:g,placeholder:'0:00',oninput:e=>{ b.gaps[i]=e.target.value; e.target.classList.toggle('bad',parseGap(e.target.value)===null); }})))),
+      h('p',{class:'hint'},'예: 2번째 0:10, 3번째 1:30 → 둘째 장은 10초 뒤, 셋째 장은 거기서 1분 30초 뒤. 채운 칸까지를 한 묶음으로 보고 그 뒤 사진에 같은 간격을 되풀이합니다. 비워 두면 모두 같은 시각입니다. 기준 시각의 초는 앞자리(10초 단위)만 바꿀 수 있고, 뒷자리는 원래 값을 그대로 살립니다: 각 사진에 원래 촬영 시각이 있으면 그 사진의 뒷자리를 쓰고, 없는 사진에는 3, 8, 0, 4, 7, 5, 1, 8을 차례로 돌려 가며 넣습니다. 1초 미만 자리는 각 사진의 원래 값을 쓰고 없으면 0입니다. 기준 시각을 비우면 각 사진의 날짜를 그대로 둡니다.'));
+  }
+  if(desc&&cat!=='date') body.append(h('p',{class:'hint'},desc));
+  fs.append(body);
+  return fs;
+}
+
+// 서명: 색을 입힌 서명 캔버스(투명 배경)
+const tintCache={key:'',cv:null};
+function tintCanvas(mask,level){
+  const key=mask.w+'x'+mask.h+':'+level+':'+mask.id;
+  if(tintCache.key===key) return tintCache.cv;
+  const cv=h('canvas',{width:mask.w,height:mask.h}), ctx=cv.getContext('2d'), im=ctx.createImageData(mask.w,mask.h), g=255-Math.round(level*2.55);
+  for(let i=0;i<mask.alpha.length;i++){ im.data[i*4]=g; im.data[i*4+1]=g; im.data[i*4+2]=g; im.data[i*4+3]=mask.alpha[i]; }
+  ctx.putImageData(im,0,0); tintCache.key=key; tintCache.cv=cv; return cv;
+}
+// 보이는 방향 기준 W×H 화면의 아래쪽(왼쪽/가운데/오른쪽)에 서명을 그림. 미리보기와 실제 저장이 같은 코드를 씀
+function drawSig(ctx,W,H,s){
+  let sw=W*s.size/100, sh=sw*s.mask.h/s.mask.w; const maxH=H*0.3; if(sh>maxH){ sw*=maxH/sh; sh=maxH; }
+  const m=Math.min(W,H)*0.03, x=s.pos==='left'?m:s.pos==='center'?(W-sw)/2:W-m-sw, y=H-m-sh;
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(tintCanvas(s.mask,s.level),x,y,sw,sh);
+}
+async function loadSignature(file){
+  const bmp=await createImageBitmap(file), sc=Math.min(1,1000/Math.max(bmp.width,bmp.height));
+  const w=Math.max(1,Math.round(bmp.width*sc)), hh=Math.max(1,Math.round(bmp.height*sc));
+  const cv=h('canvas',{width:w,height:hh}), ctx=cv.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(bmp,0,0,w,hh);
+  const mask=extractMask(ctx.getImageData(0,0,w,hh).data,w,hh); mask.id=Date.now();
+  return mask;
+}
+// 사진을 다시 그려 JPEG로 압축: 크기 변경(긴 변 longEdge px, 비율 유지)과 서명 넣기.
+// 픽셀 값과 방향은 원본 그대로 두고(색 변환·회전 없음) EXIF 방향에 맞춰 서명만 돌려서 그림
+async function renderPixels(file,orient,sig,longEdge){
+  const bmp=await createImageBitmap(file,{imageOrientation:'none',colorSpaceConversion:'none'});
+  const sc=longEdge?longEdge/Math.max(bmp.width,bmp.height):1;
+  const w=Math.max(1,Math.round(bmp.width*sc)), hh=Math.max(1,Math.round(bmp.height*sc));
+  const cv=h('canvas',{width:w,height:hh}), ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(bmp,0,0,w,hh);
+  if(sig){
+    let W=w, H=hh;
+    if(orient===6){ ctx.setTransform(0,-1,1,0,0,hh); W=hh; H=w; }
+    else if(orient===8){ ctx.setTransform(0,1,-1,0,w,0); W=hh; H=w; }
+    else if(orient===3){ ctx.setTransform(-1,0,0,-1,w,hh); }
+    drawSig(ctx,W,H,sig);
+  }
+  const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.95));
+  if(!blob) throw new Error('사진이 너무 커서 처리할 수 없습니다');
+  return {pix:new Uint8Array(await blob.arrayBuffer()),w,h:hh,resized:sc!==1};
+}
+const imgCache=new Map();
+function drawSigPreview(){
+  const cv=$('sigPrev'); if(!cv) return;
+  const s=state.sig, ctx=cv.getContext('2d'), it=curItem(), W=cv.width;
+  const paint=img=>{
+    cv.height=img?Math.max(60,Math.round(W*img.naturalHeight/img.naturalWidth)):180;
+    if(img) ctx.drawImage(img,0,0,W,cv.height);
+    else { const g=ctx.createLinearGradient(0,0,W,0); g.addColorStop(0,'#e9e9e9'); g.addColorStop(1,'#2b2b2b'); ctx.fillStyle=g; ctx.fillRect(0,0,W,cv.height); }
+    if(s.mask) drawSig(ctx,W,cv.height,s);
+  };
+  if(!it){ paint(null); return; }
+  let img=imgCache.get(it.id);
+  if(!img){ img=new Image(); img.onload=()=>{ if(curItem()===it) paint(img); }; img.onerror=()=>paint(null); img.src=urlOf(it); imgCache.set(it.id,img); paint(null); }
+  else if(img.complete&&img.naturalWidth) paint(img); else paint(null);
+}
+function sigFieldset(){
+  const s=state.sig;
+  const fs=h('fieldset',{class:s.on&&s.mask?'':'off'});
+  fs.append(h('legend',{},h('label',{},h('input',{type:'checkbox',checked:s.on&&!!s.mask,disabled:!s.mask,onchange:e=>{ s.on=e.target.checked; saveSig(); fs.classList.toggle('off',!s.on); updateCounts(); }}),'서명 넣기')));
+  fs.append(h('div',{class:'btns'},
+    h('button',{onclick:()=>$('sigInput').click()},s.mask?'다른 서명으로':'서명 이미지 불러오기'),
+    s.mask&&h('button',{class:'link',onclick:()=>{ s.mask=null; s.on=false; saveSig(); renderBase(); }},'지우기')));
+  if(!s.mask){
+    fs.append(h('p',{class:'hint'},'흰 종이에 쓴 서명을 찍은 사진이나 스캔 이미지를 넣으면, 서명만 골라내고 배경을 투명하게 만듭니다. 이미 배경이 투명한 PNG도 됩니다.'));
+    return fs;
+  }
+  const upd=()=>{ saveSig(); drawSigPreview(); };
+  const seg=h('div',{class:'seg'},[['left','왼쪽'],['center','가운데'],['right','오른쪽']].map(([v,l])=>
+    h('button',{class:s.pos===v?'on':'',onclick:e=>{ s.pos=v; [...seg.children].forEach(x=>x.classList.remove('on')); e.target.classList.add('on'); upd(); }},l)));
+  fs.append(h('div',{class:'body'},
+    h('canvas',{id:'sigPrev',class:'sigprev',width:640}),
+    h('label',{class:'brow'},h('span',{},'색 (흰색↔검정)'),h('input',{type:'range',class:'grayrange',min:0,max:100,value:s.level,oninput:e=>{ s.level=+e.target.value; upd(); }})),
+    h('div',{class:'brow'},h('span',{},'위치 (아래쪽)'),seg),
+    h('label',{class:'brow'},h('span',{},'크기'),h('input',{type:'range',min:5,max:45,value:s.size,oninput:e=>{ s.size=+e.target.value; upd(); }})),
+    h('p',{class:'hint'},'내보낼 때 선택한 모든 사진에 그려 넣습니다. 서명을 넣는 사진은 다시 압축하므로(품질 95) 원본과 픽셀이 완전히 같지는 않고, HDR 게인맵은 빠집니다. 체크를 끄면 사진은 원본 그대로입니다.')));
+  return fs;
+}
+
+function renderBase(){
+  const bp=$('basePane'), b=state.base; bp.innerHTML='';
+  const s1=h('div',{id:'sec-base'}), s3=h('div',{id:'sec-apply'}), s4=h('div',{id:'sec-out'});
+  bp.append(s1,s3,s4);
+
+  s1.append(h('h3',{},'① 작업 기준'),
+    h('div',{class:'btns'},
+      h('select',{style:'flex:1;min-width:0',onchange:e=>loadPreset(e.target.value)},
+        h('option',{value:''},state.presets.length?'프리셋 불러오기…':'저장된 프리셋 없음'),
+        state.presets.map(p=>h('option',{value:p.name,selected:b.preset===p.name},p.name))),
+      h('button',{title:'지금 기준 데이터를 이름 붙여 저장',onclick:savePreset},'프리셋 저장'),
+      b.preset&&h('button',{class:'link',onclick:()=>{ state.presets=state.presets.filter(p=>p.name!==b.preset); savePresets(); b.preset=null; renderBase(); }},'삭제')),
+    catFieldset('rights'), sigFieldset());
+
+  const open=state.shotOpen==null?(!!b.ref||innerWidth>700):state.shotOpen;
+  const det=h('details',{open,ontoggle:e=>{ state.shotOpen=e.target.open; }},h('summary',{},'촬영 정보도 맞추기 (기준 사진)'+(b.ref?' ✓':'')));
+  const src=h('fieldset',{},h('legend',{},'기준 사진'));
+  src.append(h('div',{style:'font-size:13px;margin-bottom:8px;word-break:break-all'},
+      b.ref?h('span',{},'✓ ',h('b',{},b.ref.name)):h('span',{class:'meta'},'기준 사진 없음 — 입력한 칸만 넣습니다')),
+    h('div',{class:'btns',style:'margin-bottom:0'},
+      h('button',{onclick:()=>$('refInput').click()},b.ref?'다른 사진으로':'기준 사진 불러오기'),
+      b.ref&&h('button',{class:'link',onclick:()=>{ const keep={}; for(const d of FIELDS) if(d.cat==='rights') keep[d.k]=b.fields[d.k]; state.base=newBase(); Object.assign(state.base.fields,keep); renderBase(); }},'기준 사진 빼기')),
+    h('p',{class:'hint'},'기준 사진을 왼쪽 영역에 끌어다 놓아도 됩니다. 읽어 온 값은 아래에서 고친 뒤 적용할 수 있습니다.'));
+  det.append(src, catFieldset('date'), catFieldset('gear'), catFieldset('rest'));
+  const tfs=h('fieldset',{class:b.cats.tail&&b.ref?'':'off'});
+  tfs.append(h('legend',{},h('label',{},h('input',{type:'checkbox',checked:b.cats.tail,disabled:!b.ref,onchange:e=>{ b.cats.tail=e.target.checked; tfs.classList.toggle('off',!e.target.checked); }}),'꼬리 데이터 · 제조사 블록')),
+    h('div',{class:'body'},h('div',{style:'font-size:13px'},!b.ref?'기준 사진이 있을 때만 쓸 수 있습니다':
+        `기준 사진의 꼬리 데이터: ${b.ref.trailer?'있음':'없음'}`),
+      h('p',{class:'hint'},'꼬리 데이터는 대상 사진의 것을 버리고 기준 사진의 것으로 바꿉니다(기준에 없으면 제거). 제조사 블록은 기준 사진의 촬영 시각이 들어 있어 복사하지 않고, 대상 사진의 것도 제거합니다. 꼬리 데이터 안의 촬영 시각은 각 사진의 새 촬영 일시와 같은 순간이 되도록 바꿔 넣습니다(시간대는 기준 사진에서 알아냅니다).')));
+  det.append(tfs, h('label',{class:'chk'},h('input',{type:'checkbox',checked:b.gpsClear,onchange:e=>{ b.gpsClear=e.target.checked; }}),h('span',{},'GPS 위치 정보 삭제',h('small',{},'GPS는 기준에서 복사하지 않습니다. 체크하면 대상 사진의 GPS를 지웁니다'))));
+  s1.append(det);
+
+  s3.append(h('h3',{},'③ 작업'),
+    h('button',{class:'primary',id:'applyBtn',style:'width:100%',onclick:applyAll},'적용'),
+    h('p',{class:'hint'},'체크한 사진에 ①의 기준을 넣습니다. 목록 순서가 1번째, 2번째…입니다. 기준을 고친 뒤 다시 누르면 새 값으로 다시 맞춥니다. 내보내기 전까지 원본 파일은 바뀌지 않습니다.'));
+
+  s4.append(h('h3',{},'④ 출력'));
+  const cl=h('fieldset',{},h('legend',{},'저장할 때 정리'));
+  const opt=(key,label,desc)=>h('label',{class:'chk'},h('input',{type:'checkbox',checked:state.clean[key],onchange:e=>{ state.clean[key]=e.target.checked; save(); state.items.forEach(i=>markRow(i,true)); updateCounts(); }}),h('span',{},label,h('small',{},desc)));
+  cl.append(
+    opt('software','편집 프로그램 태그 제거','기준이나 직접 입력으로 정한 소프트웨어 값은 유지하고, 손대지 않은 원래 값만 지웁니다'),
+    opt('xmp','XMP 제거','편집 이력, 원본 기종·날짜 사본이 든 XMP를 지웁니다. HDR 게인맵 목록만 담긴 XMP는 남깁니다'),
+    opt('iptc','IPTC / Photoshop 블록 제거','예전 작가·캡션·키워드 정보'),
+    opt('com','JPEG 주석 제거','인코더가 남긴 코멘트'),
+    opt('makernote','MakerNote 제거','제조사 전용 데이터. 원래 기종·렌즈·시리얼이 들어 있습니다'),
+    opt('mtime','파일 수정 시각을 촬영 일시에 맞춤',NATIVE?'저장한 파일의 수정 시각을 촬영 일시로 맞춥니다. 기기에 따라 적용되지 않을 수 있습니다':'한 장이어도 ZIP으로 저장합니다. 압축을 풀면 시각이 맞춰집니다'));
+  const o=state.out, szf=h('fieldset',{},h('legend',{},'출력 크기'));
+  const custom=h('input',{type:'number',min:16,max:12000,value:o.custom,style:o.size==='custom'?'':'display:none',oninput:e=>{ o.custom=+e.target.value||0; save(); updateCounts(); }});
+  szf.append(h('div',{class:'brow'},h('span',{},'긴 변'),
+      h('select',{onchange:e=>{ o.size=e.target.value; custom.style.display=o.size==='custom'?'':'none'; save(); updateCounts(); }},
+        [['orig','원본 크기 그대로'],['4000','4000px'],['3000','3000px'],['2048','2048px'],['1600','1600px'],['1080','1080px'],['custom','직접 입력']].map(([v,l])=>h('option',{value:v,selected:o.size===v},l)))),
+    h('div',{class:'brow'},h('span',{}),custom),
+    h('p',{class:'hint'},'가로세로 비율은 그대로 두고 긴 변을 이 길이에 맞춥니다. 크기를 바꾸는 사진은 다시 압축하고(품질 95) HDR 게인맵은 빠집니다. EXIF에 크기 태그가 있으면 바뀐 실제 크기로 고쳐 적습니다. 원본보다 크게 하면 픽셀 수만 늘고 선명해지지는 않습니다.'));
+  s4.append(szf);
+  s4.append(cl, h('div',{id:'summary',class:'meta',style:'margin-bottom:8px'}),
+    h('button',{class:'primary',id:'exportBtn',style:'width:100%',onclick:()=>exportItems(checked())},'내보내기'));
+  updateCounts(); drawSigPreview();
+}
+
+async function loadRef(file){
+  try{
+    if(!isJpeg(file)) throw 0;
+    const r=readRef(new Uint8Array(await file.arrayBuffer())), rf=readFields(r.exif), b=state.base, had=!!b.ref;
+    for(const k of BASE_KEYS) b.fields[k]=had?rf[k]:(rf[k]||b.fields[k]);   // 기준 없이 미리 적어 둔 값은 기준에 없을 때만 유지
+    b.ones=rf.Date?+rf.Date.slice(-1):null;
+    b.ref={name:file.name,...r}; b.preset=null;
+    renderBase(); toast(`기준 사진을 읽었습니다: ${file.name}`);
+  }catch(e){ toast('기준 파일을 읽을 수 없습니다 (JPEG만 가능)'); }
+}
+function savePreset(){
+  const b=state.base;
+  const name=(prompt('프리셋 이름 (예: 갤럭시 S26 + 내 저작권)',b.preset||'')||'').trim();
+  if(!name) return;
+  const data={ref:b.ref&&{name:b.ref.name,exif:presetExif(b.ref.exif),app4:[],trailer:b.ref.trailer,tzMin:b.ref.tzMin},fields:{...b.fields},cats:{...b.cats},gaps:[...b.gaps],gpsClear:b.gpsClear,ones:b.ones};
+  state.presets=state.presets.filter(p=>p.name!==name).concat({name,data});
+  if(!savePresets()){ toast('브라우저 저장 공간에 쓸 수 없어 프리셋을 저장하지 못했습니다'); return; }
+  b.preset=name; renderBase(); toast(`프리셋 "${name}"을 저장했습니다`);
+}
+function loadPreset(name){
+  const p=state.presets.find(x=>x.name===name); if(!p) return;
+  state.base=Object.assign(newBase(),clone(p.data),{preset:name}); renderBase();
+}
+function applyAll(){
+  const items=checked(), b=state.base; if(!items.length) return;
+  if(b.gaps.some(g=>parseGap(g)===null)){ toast('간격은 분:초로 적어 주세요 (예: 1:30)'); return; }
+  const any=b.ref||b.gpsClear||BASE_KEYS.some(k=>b.fields[k]&&b.cats[FIELDS.find(d=>d.k===k).cat]);
+  if(!any){ toast('기준 사진을 넣거나, 넣을 값을 입력하세요'); return; }
+  const offs=gapOffsets(b.gaps,items.length);
+  let k=0;   // 원래 촬영 시각이 없는 사진끼리 센 순번
+  items.forEach((it,i)=>applyBase(it,b,offs[i],it.orig0.Date?0:ONES_ROTATION[k++%ONES_ROTATION.length]));
+  renderList(); renderEditor();
+  toast(`${items.length}장에 적용했습니다. 내보내기 전까지 원본은 바뀌지 않습니다.`);
+}
+
+function download(blob,name){ const a=h('a',{href:URL.createObjectURL(blob),download:name}); document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),60000); }
+async function exportItems(items){
+  if(!items.length) return;
+  const btn=$('exportBtn'); btn.disabled=true;
+  const out=[], used=new Set(), failed=[]; let dropped=0;
+  for(let i=0;i<items.length;i++){
+    const it=items[i]; btn.textContent=`처리 중 ${i+1}/${items.length}`;
+    try{
+      let pix=null, size=null;
+      const sig=state.sig.on&&state.sig.mask?state.sig:null, longEdge=outLongEdge();
+      if(sig||longEdge){
+        const p=await renderPixels(it.file,effectiveExif(it,state.clean)['0th'][274]||1,sig,longEdge);
+        pix=p.pix; if(p.resized) size={w:p.w,h:p.h};
+      }
+      const r=processImage(new Uint8Array(await it.file.arrayBuffer()),it,state.clean,pix,size);
+      dropped+=r.dropped.length;
+      let name=it.name, k=1; while(used.has(name.toLowerCase())) name=it.name.replace(/(\.[^.]+)?$/,`-${++k}$1`); used.add(name.toLowerCase());
+      out.push({name,data:r.out,taken:fieldDate(it.fields.Date),mtime:state.clean.mtime?fieldDate(it.fields.Date):null});
+    }catch(e){ failed.push(it.name+': '+e.message); }
+  }
+  if(NATIVE){
+    let ok=0;
+    for(let i=0;i<out.length;i++){ btn.textContent=`저장 중 ${i+1}/${out.length}`;
+      try{ await saveNative(out[i].name,out[i].data,out[i].taken,state.clean.mtime); ok++; }catch(e){ failed.push(out[i].name+': '+(e&&e.message||e)); } }
+    updateCounts();
+    toast(failed.length?`${ok}장 저장, ${failed.length}장 실패 — ${failed[0]}`:`${ok}장을 갤러리의 Pictures/EXIF Editor 폴더에 저장했습니다`);
+    return;
+  }
+  if(out.length===1&&!state.clean.mtime) download(new Blob([out[0].data],{type:'image/jpeg'}),out[0].name);
+  else if(out.length) download(new Blob(zipParts(out),{type:'application/zip'}),out.length===1?out[0].name.replace(/(\.[^.]+)?$/,'.zip'):'photos.zip');
+  updateCounts();
+  toast(failed.length?`${out.length}장 저장, ${failed.length}장 실패 — ${failed[0]}`:`${out.length}장 저장했습니다`+(dropped?` (형식이 어긋난 태그 ${dropped}개는 제외)`:''));
+}
+
+// 폰 화면: ①~④를 한 단계씩 보여 줌
+const STEPS=['① 기준','② 사진','③ 작업','④ 저장'];
+const isPhone=()=>matchMedia('(max-width:700px)').matches;
+function setStep(n,fromPop){
+  const prev=state.step;
+  state.step=Math.max(1,Math.min(4,n)); document.body.dataset.step=state.step;
+  if(!fromPop&&isPhone()&&state.step!==prev) history.pushState({step:state.step},'');   // 폰의 뒤로 가기 버튼이 앞 단계로 가도록
+  $('stepLabel').textContent=`${STEPS[state.step-1]} (${state.step}/4)`;
+  $('prevBtn').disabled=state.step===1; $('nextBtn').style.visibility=state.step===4?'hidden':'';
+  if(isPhone()) scrollTo(0,0);
+}
+function resetAll(){
+  if(!confirm('올려 둔 사진과 기준 데이터를 모두 비우고 처음으로 돌아갑니다.\n저장해 둔 프리셋과 서명, 원본 파일은 그대로입니다.')) return;
+  state.items.forEach(i=>i.url&&URL.revokeObjectURL(i.url)); imgCache.clear();
+  state.items=[]; state.cur=null; state.base=newBase(); state.shotOpen=null;
+  renderBase(); renderList(); renderEditor(); setStep(1); toast('처음 상태로 되돌렸습니다');
+}
+addEventListener('popstate',e=>{ if(isPhone()) setStep(e.state&&e.state.step||1,true); });
+$('resetBtn').onclick=resetAll;
+$('prevBtn').onclick=()=>setStep(state.step-1);
+$('nextBtn').onclick=()=>setStep(state.step+1);
+$('sigInput').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{ state.sig.mask=await loadSignature(f); state.sig.on=true; saveSig(); renderBase(); toast('서명을 인식해 배경을 투명하게 만들었습니다'); }
+  catch(err){ toast(err&&err.message||'서명 이미지를 읽을 수 없습니다'); } };
+$('addBtn').onclick=()=>$('fileInput').click();
+$('fileInput').onchange=e=>{ addFiles([...e.target.files]); e.target.value=''; };
+$('refInput').onchange=e=>{ if(e.target.files[0]) loadRef(e.target.files[0]); e.target.value=''; };
+$('checkAll').onchange=e=>{ state.items.forEach(i=>i.checked=e.target.checked); renderList(); };
+$('clearBtn').onclick=()=>{ state.items.forEach(i=>i.url&&URL.revokeObjectURL(i.url)); state.items=[]; state.cur=null; renderList(); renderEditor(); };
+// 끌어다 놓기: ① 영역에 놓으면 기준 사진, 그 밖은 변경 대상
+const overEl=e=>e.target.closest&&e.target.closest('#basePane')?$('basePane'):$('listPane');
+const clearOver=()=>document.querySelectorAll('.over').forEach(x=>x.classList.remove('over'));
+addEventListener('dragover',e=>{ e.preventDefault(); clearOver(); overEl(e).classList.add('over'); });
+addEventListener('dragleave',e=>{ if(!e.relatedTarget) clearOver(); });
+addEventListener('drop',e=>{ e.preventDefault(); clearOver(); const files=[...e.dataTransfer.files]; if(!files.length) return;
+  if(e.target.closest&&e.target.closest('#basePane')) loadRef(files[0]); else addFiles(files); });
+renderBase(); renderList(); renderEditor(); setStep(1);
+</script>
+</body>
+</html>
