@@ -3106,7 +3106,7 @@ const newBase=()=>({ref:null,preset:null,fields:Object.fromEntries(BASE_KEYS.map
 const state={ items:[], cur:null, nextId:1, base:newBase(), presets:[], step:1, shotOpen:null,
   sig:{mask:null,on:false,level:0,pos:'right',size:18},
   out:{size:'orig',custom:2048},   // 출력 크기: 'orig' 또는 긴 변 px, 'custom'이면 custom 값
-  clean:{software:true,makernote:true,xmp:true,iptc:true,com:true,mtime:true} };
+  clean:{software:true,makernote:true,xmp:true,iptc:true,com:true,mtime:true,zip:false} };
 try{ const s=JSON.parse(localStorage.getItem('exif-editor')||'null'); if(s){ Object.assign(state.clean,s.clean||{}); Object.assign(state.out,s.out||{}); } }catch(e){}
 const outLongEdge=()=>{ const o=state.out; if(o.size==='orig') return 0; const n=o.size==='custom'?+o.custom:+o.size; return n>=16&&n<=12000?Math.round(n):0; };
 try{ const p=JSON.parse(localStorage.getItem('exif-editor-presets2')||'[]'); if(Array.isArray(p)) state.presets=p; }catch(e){}
@@ -3168,7 +3168,7 @@ function updateCounts(){
   $('count').textContent=t?`${n} / ${t}장`:'';
   $('checkAll').checked=t>0&&n===t;
   const ab=$('applyBtn'); if(ab){ ab.disabled=n===0; ab.textContent=n?`선택한 ${n}장에 적용`:'적용할 사진을 선택하세요'; }
-  const eb=$('exportBtn'); if(eb){ eb.disabled=n===0; eb.textContent=NATIVE?(n?`갤러리에 저장 (${n}장)`:'갤러리에 저장'):n>1||(n&&state.clean.mtime)?`내보내기 (${n}장 ZIP)`:'내보내기'; }
+  const eb=$('exportBtn'); if(eb){ eb.disabled=n===0; eb.textContent=NATIVE?(n?`갤러리에 저장 (${n}장)`:'갤러리에 저장'):n?`내보내기 (${n}장${state.clean.zip?' ZIP':''})`:'내보내기'; }
   const sm=$('summary'); if(sm){
     const mis=sel.filter(it=>mismatches(it,state.clean).length).length, nod=sel.filter(it=>!it.fields.Date).length, raw=sel.filter(it=>!isDirty(it)).length;
     sm.textContent=n?[`${n}장 저장 예정`, state.sig.on&&state.sig.mask&&'서명 넣음(다시 압축)', outLongEdge()&&`긴 변 ${outLongEdge()}px로 크기 변경(다시 압축)`, mis&&`경고 ${mis}장`, nod&&`날짜 없음 ${nod}장`, raw&&`손대지 않은 사진 ${raw}장`].filter(Boolean).join(' · '):'선택한 사진이 없습니다';
@@ -3406,7 +3406,7 @@ function renderBase(){
     opt('iptc','IPTC / Photoshop 블록 제거','예전 작가·캡션·키워드 정보'),
     opt('com','JPEG 주석 제거','인코더가 남긴 코멘트'),
     opt('makernote','MakerNote 제거','제조사 전용 데이터. 원래 기종·렌즈·시리얼이 들어 있습니다'),
-    opt('mtime','파일 수정 시각을 촬영 일시에 맞춤',NATIVE?'저장한 파일의 수정 시각을 촬영 일시로 맞춥니다. 기기에 따라 적용되지 않을 수 있습니다':'한 장이어도 ZIP으로 저장합니다. 압축을 풀면 시각이 맞춰집니다'));
+    NATIVE?opt('mtime','파일 수정 시각을 촬영 일시에 맞춤','저장한 파일의 수정 시각을 촬영 일시로 맞춥니다. 기기에 따라 적용되지 않을 수 있습니다'):opt('zip','ZIP으로 묶어서 저장','끄면 사진 파일 그대로 저장합니다(수정 시각은 저장한 시각). 켜면 ZIP 하나로 받고, 압축을 풀 때 수정 시각이 촬영 일시로 맞춰집니다'));
   const o=state.out, szf=h('fieldset',{},h('legend',{},'출력 크기'));
   const custom=h('input',{type:'number',min:16,max:12000,value:o.custom,style:o.size==='custom'?'':'display:none',oninput:e=>{ o.custom=+e.target.value||0; save(); updateCounts(); }});
   szf.append(h('div',{class:'brow'},h('span',{},'긴 변'),
@@ -3472,7 +3472,7 @@ async function exportItems(items){
       const r=processImage(new Uint8Array(await it.file.arrayBuffer()),it,state.clean,pix,size);
       dropped+=r.dropped.length;
       let name=it.name, k=1; while(used.has(name.toLowerCase())) name=it.name.replace(/(\.[^.]+)?$/,`-${++k}$1`); used.add(name.toLowerCase());
-      out.push({name,data:r.out,taken:fieldDate(it.fields.Date),mtime:state.clean.mtime?fieldDate(it.fields.Date):null});
+      out.push({name,data:r.out,taken:fieldDate(it.fields.Date),mtime:fieldDate(it.fields.Date)});
     }catch(e){ failed.push(it.name+': '+e.message); }
   }
   if(NATIVE){
@@ -3483,7 +3483,7 @@ async function exportItems(items){
     toast(failed.length?`${ok}장 저장, ${failed.length}장 실패 — ${failed[0]}`:`${ok}장을 갤러리의 Pictures/EXIF Editor 폴더에 저장했습니다`);
     return;
   }
-  if(out.length===1&&!state.clean.mtime) download(new Blob([out[0].data],{type:'image/jpeg'}),out[0].name);
+  if(!state.clean.zip){ for(let i=0;i<out.length;i++){ if(i){ btn.textContent=`저장 중 ${i+1}/${out.length}`; await new Promise(r=>setTimeout(r,400)); } download(new Blob([out[i].data],{type:'image/jpeg'}),out[i].name); } }
   else if(out.length) download(new Blob(zipParts(out),{type:'application/zip'}),out.length===1?out[0].name.replace(/(\.[^.]+)?$/,'.zip'):'photos.zip');
   updateCounts();
   toast(failed.length?`${out.length}장 저장, ${failed.length}장 실패 — ${failed[0]}`:`${out.length}장 저장했습니다`+(dropped?` (형식이 어긋난 태그 ${dropped}개는 제외)`:''));
