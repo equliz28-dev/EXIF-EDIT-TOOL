@@ -127,10 +127,55 @@ input.grayrange::-moz-range-thumb{width:16px;height:20px;border-radius:5px;backg
   #nav .steps{flex:1;text-align:center;font-size:13px;font-weight:650}
   #toast{bottom:86px}
 }
+/* 첫 화면 · 메타데이터 보기 */
+#home,#viewer{display:none}
+body[data-mode="home"] #home{display:flex}
+body[data-mode="view"] #viewer{display:block}
+body:not([data-mode="edit"]) main,body:not([data-mode="edit"]) #nav,body:not([data-mode="edit"]) #resetBtn,body[data-mode="home"] #homeBtn{display:none}
+#homeBtn{white-space:nowrap;min-height:0;font-size:13px}
+#home{flex-direction:column;align-items:center;justify-content:center;min-height:calc(100% - 53px);padding:24px 16px 40px;text-align:center}
+#home h2{margin:0 0 6px;font-size:22px;font-weight:650}
+.hchoices{display:grid;grid-template-columns:repeat(2,minmax(0,290px));gap:16px;margin-top:24px}
+.hcard{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;padding:22px 20px;border-radius:14px;min-height:178px}
+.hcard:hover{border-color:var(--accent)}
+.hcard svg{width:34px;height:34px;color:var(--accent);flex:none}
+.hcard b{font-size:17px}
+.hcard span{color:var(--mute);font-size:13px;line-height:1.55}
+#viewer{padding:12px 16px 40px}
+.vbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:3;background:var(--bg);padding:4px 0 12px}
+.vbar>b{font-size:15px;font-weight:650}
+.vbar .sp{flex:1}
+.vbar .chk{margin:0;align-items:center;white-space:nowrap}
+#vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;align-items:start}
+.vcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0}
+.vimg{height:170px;background:var(--line);display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:12px}
+.vimg img{width:100%;height:100%;object-fit:contain}
+.vhead{display:flex;gap:8px;align-items:center;padding:8px 12px 2px}
+.vhead b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:650}
+.vcard .warn{padding:0 12px}
+.vsec{padding:2px 12px 8px}
+.vsh{font-size:11px;font-weight:650;color:var(--accent);padding:6px 0 3px;border-bottom:1px solid var(--line);margin-bottom:2px}
+.vr{display:grid;grid-template-columns:104px minmax(0,1fr);gap:8px;font-size:12px;line-height:1.6}
+.vr span{color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vr b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;padding:0 4px;border-radius:3px}
+.vr b.full{white-space:normal;word-break:break-all}
+.vr.diff b{background:var(--changed);box-shadow:inset 2px 0 0 var(--changed-line)}
+@media (max-width:700px){
+  .hchoices{grid-template-columns:1fr;width:100%;max-width:420px}
+  .hcard{min-height:0}
+  #viewer{padding:8px 0 30px}
+  .vbar{padding:4px 16px 10px}
+  #vempty{margin:20px 16px}
+  #vgrid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding:0 16px 8px;scroll-padding:0 16px}
+  .vcard{flex:0 0 86%;scroll-snap-align:start}
+  .vr{font-size:13px;line-height:1.75}
+  .vnote{padding:0 16px}
+}
 </style>
 </head>
-<body data-step="1">
+<body data-step="1" data-mode="home">
 <header>
+  <button id="homeBtn" class="link" title="처음 화면으로 돌아갑니다">← 처음</button>
   <h1>EXIF 편집기</h1>
   <span class="note">사진은 이 컴퓨터 밖으로 나가지 않습니다 · JPEG 전용 · 화질 손실 없음</span>
   <input id="fileInput" type="file" accept="image/jpeg,.jpg,.jpeg" multiple hidden>
@@ -139,6 +184,27 @@ input.grayrange::-moz-range-thumb{width:16px;height:20px;border-radius:5px;backg
   <input id="refInput" type="file" accept="image/jpeg,.jpg,.jpeg" hidden>
   <input id="sigInput" type="file" accept="image/*" hidden>
 </header>
+<section id="home">
+  <h2>무엇을 할까요?</h2>
+  <p class="meta">사진은 이 기기 밖으로 나가지 않아요</p>
+  <div class="hchoices">
+    <button class="hcard" id="goEdit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><b>EXIF 편집</b><span>기준 데이터로 여러 장을 한 번에 고치고, 저작권과 서명을 넣어 저장해요</span></button>
+    <button class="hcard" id="goView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/><path d="M5.5 13h2M5.5 16h2M16.5 13h2M16.5 16h2"/></svg><b>메타데이터 보기</b><span>여러 장의 촬영 정보를 탐색기 ‘자세히’처럼 나란히 놓고 비교해요</span></button>
+  </div>
+</section>
+<section id="viewer">
+  <div class="vbar">
+    <b>메타데이터 보기</b><span id="vcount" class="meta"></span><span class="sp"></span>
+    <label class="chk"><input type="checkbox" id="vdiff"><span>서로 다른 항목만</span></label>
+    <button id="vadd" class="primary">사진 추가</button>
+    <button id="vsend" title="이 사진들을 EXIF 편집의 ② 변경 대상으로 넣습니다">편집기로 보내기</button>
+    <button class="link" id="vclear">비우기</button>
+  </div>
+  <div id="vempty" class="drop"><strong>사진을 여기에 끌어다 놓으세요</strong>여러 장을 한 번에 올리면 촬영 정보가 나란히 보여요<br><button class="primary" id="vpick" style="margin-top:14px">사진 고르기</button></div>
+  <div id="vgrid"></div>
+  <p class="hint vnote" id="vnote">노란색 칸은 다른 사진과 값이 다른 항목이에요. 잘린 값은 누르면 전체가 보여요.</p>
+  <input id="viewInput" type="file" accept="image/*,.jpg,.jpeg" multiple hidden>
+</section>
 <main>
   <section id="basePane"></section>
   <section id="listPane">
@@ -3094,6 +3160,97 @@ function zipParts(files){
   end.setUint32(12,csz,true); end.setUint32(16,off,true);
   return [...parts,...central,new Uint8Array(end.buffer)];
 }
+
+// ---------- 메타데이터 보기: 탐색기 '자세히'처럼 항목별로 정리 ----------
+const DETAIL_ENUM={
+  274:{1:'정상',2:'좌우 반전',3:'180° 회전',4:'상하 반전',5:'좌우 반전 후 시계 방향 90°',6:'시계 방향 90° 회전',7:'좌우 반전 후 반시계 방향 90°',8:'반시계 방향 90° 회전'},
+  40961:{1:'sRGB',65535:'보정되지 않음'},
+  37383:{0:'알 수 없음',1:'평균',2:'중앙 중점 평균',3:'스폿',4:'멀티 스폿',5:'패턴',6:'부분',255:'기타'},
+  34850:{0:'정의 안 됨',1:'수동',2:'일반 프로그램',3:'조리개 우선',4:'셔터 우선',5:'크리에이티브',6:'액션',7:'인물',8:'풍경'},
+  37384:{0:'알 수 없음',1:'주광',2:'형광등',3:'텅스텐',4:'플래시',9:'맑은 날',10:'흐린 날',11:'그늘',12:'주광색 형광등',13:'주백색 형광등',14:'백색 형광등',15:'온백색 형광등',17:'표준광 A',18:'표준광 B',19:'표준광 C',20:'D55',21:'D65',22:'D75',23:'D50',24:'ISO 스튜디오 텅스텐',255:'기타'},
+  41987:{0:'자동',1:'수동'}, 41986:{0:'자동 노출',1:'수동 노출',2:'자동 브래킷'}, 41990:{0:'표준',1:'풍경',2:'인물',3:'야경'},
+  41992:{0:'보통',1:'약하게',2:'강하게'}, 41993:{0:'보통',1:'낮게',2:'높게'}, 41994:{0:'보통',1:'약하게',2:'강하게'},
+};
+// u8: 파일 앞부분(또는 전체, null이면 빈 값), tailU8: 파일 끝부분. 항목 순서와 개수는 항상 같음(사진끼리 나란히 비교)
+function photoDetails(u8,tailU8){
+  let ex=emptyExif(), segs=[];
+  if(u8){ const r=readExif(u8); ex=r.exif; segs=r.segs; }
+  const g=(i,t)=>ex[i][t];
+  const txt=v=>typeof v==='string'?utf8dec(v).replace(/[\0\s]+$/,'').trim():'';
+  const xp=v=>{ if(!Array.isArray(v)) return ''; let o=''; for(let i=0;i+1<v.length;i+=2) o+=String.fromCharCode(v[i]|(v[i+1]<<8)); return o.replace(/\0+$/,'').trim(); };
+  const rat=v=>{ if(typeof v==='number') return v; if(!Array.isArray(v)) return null; if(Array.isArray(v[0])) v=v[0]; return v[1]?v[0]/v[1]:null; };
+  const int=v=>Array.isArray(v)?(typeof v[0]==='number'?v[0]:null):typeof v==='number'?v:null;
+  const r1=x=>String(+x.toFixed(1)), r2=x=>String(+x.toFixed(2));
+  const fx=(v,f)=>{ const x=rat(v); return x==null||!isFinite(x)?'':f(x); };
+  const en=(t,v)=>{ v=int(v); return v==null?'':(DETAIL_ENUM[t]&&DETAIL_ENUM[t][v])||String(v); };
+  const dt=(v,off)=>{ const m=typeof v==='string'&&v.match(/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/); return m?`${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}:${m[6]}`+(typeof off==='string'&&/^[+-]\d\d:\d\d/.test(off)?` (UTC${off.slice(0,6)})`:''):''; };
+  const sof=segs.find(s=>s.m>=0xC0&&s.m<=0xCF&&s.m!==0xC4&&s.m!==0xC8&&s.m!==0xCC&&s.e-s.s>=10);
+  const W=sof?(u8[sof.s+7]<<8|u8[sof.s+8]):null, H=sof?(u8[sof.s+5]<<8|u8[sof.s+6]):null;
+  const unit=int(g('0th',296)), dpi=v=>fx(v,x=>r2(x)+(unit===3?' dpcm':' dpi'));
+  const flash=v=>{ v=int(v); if(v==null) return ''; if(v&0x20) return '플래시 없음'; const m=(v>>3)&3; return (v&1?'플래시 발광':'플래시 발광 안 함')+(m===3?' (자동)':m===1?' (강제 발광)':m===2?' (발광 금지)':''); };
+  const has=k=>segs.some(s=>s.kind===k);
+  let trailer='';
+  if(tailU8){ const t=findTrailer(tailU8); if(t>=0){ const m=u82bin(tailU8.subarray(t)).match(/Image_UTC_Data(\d{13})/); trailer=m?'있음 · '+new Date(+m[1]).toISOString().slice(0,19).replace('T',' ')+' UTC':'있음'; } }
+  const iso=int(g('Exif',34855)), f35=int(g('Exif',41989)), rating=int(g('0th',18246)), mn=g('Exif',37500), ver=g('Exif',36864);
+  const rows=[
+    ['설명','제목',txt(g('0th',270))||xp(g('0th',40091))],
+    ['설명','주제',xp(g('0th',40095))],
+    ['설명','태그',xp(g('0th',40094))],
+    ['설명','메모',xp(g('0th',40092))],
+    ['설명','등급',rating>0?'★'.repeat(Math.min(5,rating)):''],
+    ['원본','작성자',txt(g('0th',315))||xp(g('0th',40093))],
+    ['원본','찍은 날짜',dt(g('Exif',36867),g('Exif',36881))],
+    ['원본','디지털화한 날짜',dt(g('Exif',36868),g('Exif',36882))],
+    ['원본','EXIF 수정 날짜',dt(g('0th',306),g('Exif',36880))],
+    ['원본','프로그램 이름',txt(g('0th',305))],
+    ['원본','저작권',txt(g('0th',33432))],
+    ['이미지','크기',W&&H?`${W} × ${H}`:''],
+    ['이미지','가로 해상도',dpi(g('0th',282))],
+    ['이미지','세로 해상도',dpi(g('0th',283))],
+    ['이미지','비트 수준',sof?String(u8[sof.s+4]*u8[sof.s+9]):''],
+    ['이미지','압축',sof?(sof.m===0xC2?'JPEG (프로그레시브)':'JPEG'):''],
+    ['이미지','색 표현',en(40961,g('Exif',40961))],
+    ['이미지','방향',en(274,g('0th',274))],
+    ['이미지','이미지 ID',txt(g('Exif',42016))],
+    ['카메라','카메라 제조업체',txt(g('0th',271))],
+    ['카메라','카메라 모델',txt(g('0th',272))],
+    ['카메라','F-스톱',fx(g('Exif',33437),x=>'f/'+r1(x))],
+    ['카메라','노출 시간',fx(g('Exif',33434),x=>x>0&&x<1?`1/${Math.round(1/x)}초`:`${r1(x)}초`)],
+    ['카메라','ISO 감도',iso!=null?'ISO-'+iso:''],
+    ['카메라','노출 보정',fx(g('Exif',37380),x=>(x>0?'+':'')+r1(x)+' 단계')],
+    ['카메라','초점 거리',fx(g('Exif',37386),x=>r1(x)+' mm')],
+    ['카메라','35mm 초점 거리',f35?f35+' mm':''],
+    ['카메라','최대 조리개',fx(g('Exif',37381),x=>'f/'+r1(Math.pow(2,x/2)))],
+    ['카메라','측광 모드',en(37383,g('Exif',37383))],
+    ['카메라','피사체 거리',fx(g('Exif',37382),x=>r2(x)+' m')],
+    ['카메라','플래시 모드',flash(g('Exif',37385))],
+    ['고급 사진','렌즈 제조업체',txt(g('Exif',42035))],
+    ['고급 사진','렌즈 모델',txt(g('Exif',42036))],
+    ['고급 사진','카메라 일련 번호',txt(g('Exif',42033))],
+    ['고급 사진','노출 프로그램',en(34850,g('Exif',34850))],
+    ['고급 사진','노출 모드',en(41986,g('Exif',41986))],
+    ['고급 사진','화이트 밸런스',en(41987,g('Exif',41987))],
+    ['고급 사진','광원',en(37384,g('Exif',37384))],
+    ['고급 사진','밝기',fx(g('Exif',37379),r2)],
+    ['고급 사진','대비',en(41992,g('Exif',41992))],
+    ['고급 사진','채도',en(41993,g('Exif',41993))],
+    ['고급 사진','선명도',en(41994,g('Exif',41994))],
+    ['고급 사진','장면 유형',en(41990,g('Exif',41990))],
+    ['고급 사진','디지털 확대/축소',fx(g('Exif',41988),x=>x>0?r2(x)+'배':'사용 안 함')],
+    ['고급 사진','EXIF 버전',typeof ver==='string'?ver.replace(/\0/g,''):''],
+    ['GPS','위도',gpsToDec(g('GPS',2),g('GPS',1))],
+    ['GPS','경도',gpsToDec(g('GPS',4),g('GPS',3))],
+    ['GPS','고도',fx(g('GPS',6),x=>r1(x)+' m'+(int(g('GPS',5))===1?' (해수면 아래)':''))],
+    ['그 밖의 데이터','XMP',has('xmp')?'있음 (편집 이력 등)':has('xmpsafe')?'HDR 정보만 있음':''],
+    ['그 밖의 데이터','IPTC',has('iptc')?'있음':''],
+    ['그 밖의 데이터','MakerNote',typeof mn==='string'&&mn.length?Math.max(1,Math.round(mn.length/1024))+' KB':''],
+    ['그 밖의 데이터','제조사 블록',has('app4')?'있음':''],
+    ['그 밖의 데이터','삼성 꼬리 데이터',trailer],
+    ['그 밖의 데이터','JPEG 주석',has('com')?'있음':''],
+    ['그 밖의 데이터','미리보기 썸네일',ex.thumbnail?Math.max(1,Math.round(ex.thumbnail.length/1024))+' KB':''],
+  ];
+  return {rows:rows.map(([sec,label,value])=>({sec,label,value:value||''})),w:W,h:H};
+}
 </script>
 
 <script>
@@ -3505,7 +3662,7 @@ const isPhone=()=>matchMedia('(max-width:700px)').matches;
 function setStep(n,fromPop){
   const prev=state.step;
   state.step=Math.max(1,Math.min(4,n)); document.body.dataset.step=state.step;
-  if(!fromPop&&isPhone()&&state.step!==prev) history.pushState({step:state.step},'');   // 폰의 뒤로 가기 버튼이 앞 단계로 가도록
+  if(!fromPop&&isPhone()&&state.step!==prev) history.pushState({mode:'edit',step:state.step},'');   // 폰의 뒤로 가기 버튼이 앞 단계로 가도록
   $('stepLabel').textContent=`${STEPS[state.step-1]} (${state.step}/4)`;
   $('prevBtn').disabled=state.step===1; $('nextBtn').style.visibility=state.step===4?'hidden':'';
   if(isPhone()) scrollTo(0,0);
@@ -3516,7 +3673,76 @@ function resetAll(){
   state.items=[]; state.cur=null; state.base=newBase(); state.shotOpen=null;
   renderBase(); renderList(); renderEditor(); setStep(1); toast('처음 상태로 되돌렸습니다');
 }
-addEventListener('popstate',e=>{ if(isPhone()) setStep(e.state&&e.state.step||1,true); });
+// 첫 화면: EXIF 편집 / 메타데이터 보기 중 고름. 폰의 뒤로 가기로 첫 화면에 돌아올 수 있음
+function setMode(m,fromPop){
+  document.body.dataset.mode=m;
+  if(!fromPop) history.pushState({mode:m,step:state.step},'');
+  if(m==='view') renderViewer();
+  scrollTo(0,0);
+}
+addEventListener('popstate',e=>{ const s=e.state||{mode:'home'}, m=s.mode||'edit'; setMode(m,true); if(m==='edit'&&isPhone()) setStep(s.step||1,true); });
+
+// 메타데이터 보기
+const view={items:[],onlyDiff:false};
+const VIEW_NODIFF=new Set(['파일']);   // 파일 이름·크기·날짜는 원래 사진마다 달라서 비교 표시에서 뺌
+async function addViewFiles(files){
+  for(const file of files){
+    const it={id:state.nextId++,file,name:file.name,url:null,d:null,err:''};
+    try{
+      if(!isJpeg(file)) throw new Error('JPEG가 아니어서 EXIF는 읽지 못했어요');
+      const tail=new Uint8Array(await file.slice(Math.max(0,file.size-(1<<18))).arrayBuffer());
+      try{ it.d=photoDetails(new Uint8Array(await file.slice(0,1<<20).arrayBuffer()),tail); }
+      catch(e){ it.d=photoDetails(new Uint8Array(await file.arrayBuffer()),tail); }
+    }catch(e){ it.err=e&&e.message||'읽을 수 없는 파일이에요'; it.d=photoDetails(null,null); }
+    view.items.push(it);
+  }
+  renderViewer();
+}
+function viewRows(it){
+  const f=it.file, d=it.d.rows, k=d.findIndex(r=>r.sec==='그 밖의 데이터');
+  const file=[['이름',f.name],['형식',f.type||(f.name.split('.').pop()||'').toUpperCase()],['크기',fmtSize(f.size)],['수정한 날짜',f.lastModified?new Date(f.lastModified).toLocaleString('ko-KR'):'']].map(([label,value])=>({sec:'파일',label,value}));
+  return [...d.slice(0,k),...file,...d.slice(k)];
+}
+function renderViewer(){
+  const box=$('vgrid'), n=view.items.length; box.innerHTML='';
+  $('vcount').textContent=n?`${n}장`:'';
+  $('vsend').disabled=!view.items.some(i=>!i.err); $('vclear').disabled=!n; $('vdiff').disabled=view.items.filter(i=>!i.err).length<2;
+  $('vempty').style.display=n?'none':''; $('vnote').style.display=view.items.filter(i=>!i.err).length>1?'':'none';
+  if(!n) return;
+  const all=view.items.map(viewRows), show=[], diff=[];
+  const ok=view.items.map((it,j)=>it.err?null:all[j]).filter(Boolean);   // 비교는 읽을 수 있었던 사진끼리만
+  all[0].forEach((r,i)=>{
+    const v=all.map(rows=>rows[i].value);
+    diff[i]=ok.length>1&&!VIEW_NODIFF.has(r.sec)&&new Set(ok.map(rows=>rows[i].value)).size>1;
+    show[i]=v.some(Boolean)&&(!view.onlyDiff||diff[i]);
+  });
+  view.items.forEach((it,j)=>{
+    const img=h('img',{src:it.url||(it.url=URL.createObjectURL(it.file)),loading:'lazy',alt:'',onerror:e=>e.target.replaceWith('미리보기를 표시할 수 없어요')});
+    const card=h('article',{class:'vcard'},h('div',{class:'vimg'},img),
+      h('div',{class:'vhead'},h('b',{title:it.name},it.name),h('button',{class:'link',onclick:()=>{ it.url&&URL.revokeObjectURL(it.url); view.items=view.items.filter(x=>x!==it); renderViewer(); }},'빼기')),
+      it.err&&h('div',{class:'warn'},it.err));
+    let sec=null, sbox=null;
+    all[j].forEach((r,i)=>{
+      if(!show[i]||(it.err&&r.sec!=='파일')) return;   // 읽지 못한 파일은 파일 정보만
+      if(r.sec!==sec){ sec=r.sec; sbox=h('div',{class:'vsec'},h('div',{class:'vsh'},sec)); card.append(sbox); }
+      sbox.append(h('div',{class:'vr'+(diff[i]&&!it.err?' diff':'')},h('span',{title:r.label},r.label),h('b',{title:r.value,onclick:e=>e.currentTarget.classList.toggle('full')},r.value||'—')));
+    });
+    if(view.onlyDiff&&!sbox&&!it.err) card.append(h('p',{class:'hint',style:'padding:0 12px 10px'},'다른 사진과 다른 항목이 없어요'));
+    box.append(card);
+  });
+}
+$('homeBtn').onclick=()=>setMode('home');
+$('goEdit').onclick=()=>setMode('edit');
+$('goView').onclick=()=>setMode('view');
+$('vadd').onclick=$('vpick').onclick=()=>$('viewInput').click();
+$('viewInput').onchange=e=>{ addViewFiles([...e.target.files]); e.target.value=''; };
+$('vdiff').onchange=e=>{ view.onlyDiff=e.target.checked; renderViewer(); };
+$('vclear').onclick=()=>{ view.items.forEach(i=>i.url&&URL.revokeObjectURL(i.url)); view.items=[]; renderViewer(); };
+$('vsend').onclick=async()=>{
+  const files=view.items.filter(i=>!i.err).map(i=>i.file); if(!files.length) return;
+  await addFiles(files); setMode('edit'); if(isPhone()) setStep(2);
+  toast(`${files.length}장을 ② 변경 대상에 넣었어요`);
+};
 $('resetBtn').onclick=resetAll;
 $('prevBtn').onclick=()=>setStep(state.step-1);
 $('nextBtn').onclick=()=>setStep(state.step+1);
@@ -3529,13 +3755,16 @@ $('refInput').onchange=e=>{ if(e.target.files[0]) loadRef(e.target.files[0]); e.
 $('checkAll').onchange=e=>{ state.items.forEach(i=>i.checked=e.target.checked); renderList(); };
 $('clearBtn').onclick=()=>{ state.items.forEach(i=>i.url&&URL.revokeObjectURL(i.url)); state.items=[]; state.cur=null; renderList(); renderEditor(); };
 // 끌어다 놓기: ① 영역에 놓으면 기준 사진, 그 밖은 변경 대상
-const overEl=e=>e.target.closest&&e.target.closest('#basePane')?$('basePane'):$('listPane');
+const overEl=e=>{ const m=document.body.dataset.mode; if(m!=='edit') return $(m==='view'?'viewer':'home'); return e.target.closest&&e.target.closest('#basePane')?$('basePane'):$('listPane'); };
 const clearOver=()=>document.querySelectorAll('.over').forEach(x=>x.classList.remove('over'));
 addEventListener('dragover',e=>{ e.preventDefault(); clearOver(); overEl(e).classList.add('over'); });
 addEventListener('dragleave',e=>{ if(!e.relatedTarget) clearOver(); });
 addEventListener('drop',e=>{ e.preventDefault(); clearOver(); const files=[...e.dataTransfer.files]; if(!files.length) return;
+  const mode=document.body.dataset.mode;
+  if(mode!=='edit'){ if(mode==='home') setMode('view'); addViewFiles(files); return; }   // 첫 화면에 놓으면 메타데이터 보기로
   if(e.target.closest&&e.target.closest('#basePane')) loadRef(files[0]); else addFiles(files); });
-renderBase(); renderList(); renderEditor(); setStep(1);
+renderBase(); renderList(); renderEditor(); setStep(1,true);
+history.replaceState({mode:'home'},''); setMode('home',true);
 </script>
 </body>
 </html>
